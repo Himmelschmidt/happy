@@ -19,18 +19,27 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 
+function readServerUrlFromSettings(homeDir) {
+  const settingsFile = path.join(homeDir, 'settings.json');
+  try {
+    if (fs.existsSync(settingsFile)) {
+      const raw = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+      return raw.serverUrl;
+    }
+  } catch { /* ignore parse errors */ }
+  return undefined;
+}
+
 const VARIANTS = {
   stable: {
     homeDir: path.join(os.homedir(), '.happy'),
     color: '\x1b[32m', // Green
     label: '✅ STABLE',
-    serverUrl: process.env.HAPPY_SERVER_URL || 'https://api.cluster-fluster.com'
   },
   dev: {
     homeDir: path.join(os.homedir(), '.happy-dev'),
     color: '\x1b[33m', // Yellow
     label: '🔧 DEV',
-    serverUrl: process.env.HAPPY_SERVER_URL || 'https://api.cluster-fluster.com'
   }
 };
 
@@ -61,11 +70,12 @@ if (!fs.existsSync(config.homeDir)) {
 // Visual feedback
 console.log(`${config.color}${config.label}\x1b[0m Happy CLI (data: ${config.homeDir})`);
 
-// Set environment and execute command
+// Set environment and execute command - priority: env > settings.json > default
+const serverUrl = process.env.HAPPY_SERVER_URL || readServerUrlFromSettings(config.homeDir) || 'https://api.cluster-fluster.com';
 const env = {
   ...process.env,
   HAPPY_HOME_DIR: config.homeDir,
-  HAPPY_SERVER_URL: config.serverUrl,
+  HAPPY_SERVER_URL: serverUrl,
   HAPPY_VARIANT: variant, // For internal validation
 };
 

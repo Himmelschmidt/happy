@@ -5,7 +5,7 @@
  * Environment files should be loaded using Node's --env-file flag
  */
 
-import { existsSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import packageJson from '../package.json'
@@ -28,10 +28,6 @@ class Configuration {
   public readonly disableCaffeinate: boolean
 
   constructor() {
-    // Server configuration - priority: parameter > environment > default
-    this.serverUrl = process.env.HAPPY_SERVER_URL || 'https://api.cluster-fluster.com'
-    this.webappUrl = process.env.HAPPY_WEBAPP_URL || 'https://app.happy.engineering'
-
     // Check if we're running as daemon based on process args
     const args = process.argv.slice(2)
     this.isDaemonProcess = args.length >= 2 && args[0] === 'daemon' && (args[1] === 'start-sync')
@@ -50,6 +46,17 @@ class Configuration {
     this.privateKeyFile = join(this.happyHomeDir, 'access.key')
     this.daemonStateFile = join(this.happyHomeDir, 'daemon.state.json')
     this.daemonLockFile = join(this.happyHomeDir, 'daemon.state.json.lock')
+
+    // Server configuration - priority: environment > settings.json > default
+    let settingsServerUrl: string | undefined
+    if (existsSync(this.settingsFile)) {
+      try {
+        const raw = JSON.parse(readFileSync(this.settingsFile, 'utf8'))
+        settingsServerUrl = raw.serverUrl
+      } catch { /* ignore parse errors */ }
+    }
+    this.serverUrl = process.env.HAPPY_SERVER_URL || settingsServerUrl || 'https://api.cluster-fluster.com'
+    this.webappUrl = process.env.HAPPY_WEBAPP_URL || 'https://app.happy.engineering'
 
     this.isExperimentalEnabled = ['true', '1', 'yes'].includes(process.env.HAPPY_EXPERIMENTAL?.toLowerCase() || '');
     this.disableCaffeinate = ['true', '1', 'yes'].includes(process.env.HAPPY_DISABLE_CAFFEINATE?.toLowerCase() || '');
