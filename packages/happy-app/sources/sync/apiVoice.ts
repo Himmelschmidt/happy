@@ -1,5 +1,5 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 import { config } from '@/config';
 import { storage } from './storage';
 
@@ -13,7 +13,7 @@ export async function fetchVoiceToken(
     credentials: AuthCredentials,
     sessionId: string
 ): Promise<VoiceTokenResponse> {
-    const serverUrl = getServerUrl();
+    const serverUrl = getResolvedServerUrl();
     const userId = storage.getState().profile.id;
     console.log(`[Voice] User ID: ${userId}`);
 

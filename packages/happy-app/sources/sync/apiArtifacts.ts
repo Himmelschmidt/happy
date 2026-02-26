@@ -1,13 +1,13 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 import { Artifact, ArtifactCreateRequest, ArtifactUpdateRequest, ArtifactUpdateResponse } from './artifactTypes';
 
 /**
  * Fetch all artifacts for the account
  */
 export async function fetchArtifacts(credentials: AuthCredentials): Promise<Artifact[]> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/artifacts`, {
@@ -30,7 +30,7 @@ export async function fetchArtifacts(credentials: AuthCredentials): Promise<Arti
  * Fetch a single artifact with full body
  */
 export async function fetchArtifact(credentials: AuthCredentials, artifactId: string): Promise<Artifact> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
@@ -59,7 +59,7 @@ export async function createArtifact(
     credentials: AuthCredentials, 
     request: ArtifactCreateRequest
 ): Promise<Artifact> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/artifacts`, {
@@ -91,7 +91,7 @@ export async function updateArtifact(
     artifactId: string,
     request: ArtifactUpdateRequest
 ): Promise<ArtifactUpdateResponse> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {
@@ -122,7 +122,7 @@ export async function deleteArtifact(
     credentials: AuthCredentials,
     artifactId: string
 ): Promise<void> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/artifacts/${artifactId}`, {

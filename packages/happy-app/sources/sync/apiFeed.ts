@@ -1,6 +1,6 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 import { FeedResponse, FeedResponseSchema, FeedItem } from './feedTypes';
 import { log } from '@/log';
 
@@ -15,7 +15,7 @@ export async function fetchFeed(
         after?: string;
     }
 ): Promise<{ items: FeedItem[]; hasMore: boolean }> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     
     return await backoff(async () => {
         const params = new URLSearchParams();

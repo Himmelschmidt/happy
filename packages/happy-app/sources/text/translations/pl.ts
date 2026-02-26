@@ -333,7 +333,12 @@ export const pl: TranslationStructure = {
         failedToConnectToServer: 'Nie udało się połączyć z serwerem',
         currentlyUsingCustomServer: 'Aktualnie używany jest niestandardowy serwer',
         customServerUrlLabel: 'URL niestandardowego serwera',
-        advancedFeatureFooter: 'To jest zaawansowana funkcja. Zmieniaj serwer tylko jeśli wiesz, co robisz. Po zmianie serwera będziesz musiał się wylogować i zalogować ponownie.'
+        advancedFeatureFooter: 'To jest zaawansowana funkcja. Zmieniaj serwer tylko jeśli wiesz, co robisz. Po zmianie serwera będziesz musiał się wylogować i zalogować ponownie.',
+        lanUrlLabel: 'URL sieci LAN',
+        lanUrlPlaceholder: 'http://192.168.1.100:3000',
+        lanUrlFooter: 'Jeśli serwer jest w tej samej sieci i publiczny URL jest nieosiągalny (hairpin NAT), wpisz tutaj adres LAN. Aplikacja automatycznie użyje tego URL, który odpowie pierwszy.',
+        connectedViaLan: 'Połączono przez LAN',
+        connectedViaPublic: 'Połączono przez publiczny URL',
     },
 
     sessionInfo: {

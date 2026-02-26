@@ -1,6 +1,6 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 import {
     UserProfile,
     UserResponse,
@@ -18,7 +18,7 @@ export async function searchUsersByUsername(
     credentials: AuthCredentials,
     username: string
 ): Promise<UserProfile[]> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(
@@ -56,7 +56,7 @@ export async function getUserProfile(
     credentials: AuthCredentials,
     userId: string
 ): Promise<UserProfile | null> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(
@@ -111,7 +111,7 @@ export async function sendFriendRequest(
     credentials: AuthCredentials,
     recipientId: string
 ): Promise<UserProfile | null> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/friends/add`, {
@@ -153,7 +153,7 @@ export async function sendFriendRequest(
 export async function getFriendsList(
     credentials: AuthCredentials
 ): Promise<UserProfile[]> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/friends`, {
@@ -185,7 +185,7 @@ export async function removeFriend(
     credentials: AuthCredentials,
     friendId: string
 ): Promise<UserProfile | null> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/friends/remove`, {

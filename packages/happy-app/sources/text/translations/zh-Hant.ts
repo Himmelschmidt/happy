@@ -323,7 +323,12 @@ export const zhHant: TranslationStructure = {
         failedToConnectToServer: '連線伺服器失敗',
         currentlyUsingCustomServer: '目前使用自訂伺服器',
         customServerUrlLabel: '自訂伺服器 URL',
-        advancedFeatureFooter: "這是一個進階功能。只有在您知道自己在做什麼時才更改伺服器。更改伺服器後您需要重新登入。"
+        advancedFeatureFooter: "這是一個進階功能。只有在您知道自己在做什麼時才更改伺服器。更改伺服器後您需要重新登入。",
+        lanUrlLabel: '區域網路 URL',
+        lanUrlPlaceholder: 'http://192.168.1.100:3000',
+        lanUrlFooter: '如果伺服器在同一網路上且公共 URL 無法存取（髮夾 NAT），請在此輸入區域網路地址。應用程式將自動使用最先回應的 URL。',
+        connectedViaLan: '已透過區域網路連線',
+        connectedViaPublic: '已透過公共 URL 連線',
     },
 
     sessionInfo: {

@@ -22,7 +22,7 @@ import { initializeTracking, tracking } from '@/track';
 import { parseToken } from '@/utils/parseToken';
 import { RevenueCat, LogLevel, PaywallResult } from './revenueCat';
 import { trackPaywallPresented, trackPaywallPurchased, trackPaywallCancelled, trackPaywallRestored, trackPaywallError } from '@/track';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 import { config } from '@/config';
 import { log } from '@/log';
 import { gitStatusSync } from './gitStatusSync';
@@ -720,7 +720,7 @@ class Sync {
     private fetchSessions = async () => {
         if (!this.credentials) return;
 
-        const API_ENDPOINT = getServerUrl();
+        const API_ENDPOINT = getResolvedServerUrl();
         const response = await fetch(`${API_ENDPOINT}/v1/sessions`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
@@ -1094,7 +1094,7 @@ class Sync {
         if (!this.credentials) return;
 
         console.log('📊 Sync: Fetching machines...');
-        const API_ENDPOINT = getServerUrl();
+        const API_ENDPOINT = getResolvedServerUrl();
         const response = await fetch(`${API_ENDPOINT}/v1/machines`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
@@ -1306,7 +1306,7 @@ class Sync {
     private syncSettings = async () => {
         if (!this.credentials) return;
 
-        const API_ENDPOINT = getServerUrl();
+        const API_ENDPOINT = getResolvedServerUrl();
         const maxRetries = 3;
         let retryCount = 0;
 
@@ -1421,7 +1421,7 @@ class Sync {
     private fetchProfile = async () => {
         if (!this.credentials) return;
 
-        const API_ENDPOINT = getServerUrl();
+        const API_ENDPOINT = getResolvedServerUrl();
         const response = await fetch(`${API_ENDPOINT}/v1/account/profile`, {
             headers: {
                 'Authorization': `Bearer ${this.credentials.token}`,
@@ -1463,7 +1463,7 @@ class Sync {
                 return;
             }
 
-            const serverUrl = getServerUrl();
+            const serverUrl = getResolvedServerUrl();
 
             // Get platform and app identifiers
             const platform = Platform.OS;
@@ -2332,7 +2332,7 @@ async function syncInit(credentials: AuthCredentials, restore: boolean) {
     initializeTracking(encryption.anonID);
 
     // Initialize socket connection
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     apiSocket.initialize({ endpoint: API_ENDPOINT, token: credentials.token }, encryption);
 
     // Wire socket status to storage

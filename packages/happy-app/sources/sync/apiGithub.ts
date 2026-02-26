@@ -1,6 +1,6 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 
 export interface GitHubOAuthParams {
     url: string;
@@ -24,7 +24,7 @@ export interface AccountProfile {
  * Get GitHub OAuth parameters from the server
  */
 export async function getGitHubOAuthParams(credentials: AuthCredentials): Promise<GitHubOAuthParams> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/connect/github/params`, {
@@ -52,7 +52,7 @@ export async function getGitHubOAuthParams(credentials: AuthCredentials): Promis
  * Get account profile including GitHub connection status
  */
 export async function getAccountProfile(credentials: AuthCredentials): Promise<AccountProfile> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/account/profile`, {
@@ -76,7 +76,7 @@ export async function getAccountProfile(credentials: AuthCredentials): Promise<A
  * Disconnect GitHub account from the user's profile
  */
 export async function disconnectGitHub(credentials: AuthCredentials): Promise<void> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/connect/github`, {

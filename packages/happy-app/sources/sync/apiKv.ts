@@ -1,6 +1,6 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 
 //
 // Types
@@ -70,7 +70,7 @@ export async function kvGet(
     credentials: AuthCredentials,
     key: string
 ): Promise<KvItem | null> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/kv/${encodeURIComponent(key)}`, {
@@ -99,7 +99,7 @@ export async function kvList(
     credentials: AuthCredentials,
     params: KvListParams = {}
 ): Promise<KvListResponse> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     const queryParams = new URLSearchParams();
     if (params.prefix) {
@@ -144,7 +144,7 @@ export async function kvBulkGet(
         throw new Error('Cannot bulk get more than 100 keys at once');
     }
 
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/kv/bulk`, {
@@ -182,7 +182,7 @@ export async function kvMutate(
         throw new Error('Cannot mutate more than 100 keys at once');
     }
 
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/kv`, {

@@ -324,7 +324,12 @@ export const zhHans: TranslationStructure = {
         failedToConnectToServer: '连接服务器失败',
         currentlyUsingCustomServer: '当前使用自定义服务器',
         customServerUrlLabel: '自定义服务器 URL',
-        advancedFeatureFooter: "这是一个高级功能。只有在您知道自己在做什么时才更改服务器。更改服务器后您需要重新登录。"
+        advancedFeatureFooter: "这是一个高级功能。只有在您知道自己在做什么时才更改服务器。更改服务器后您需要重新登录。",
+        lanUrlLabel: '局域网 URL',
+        lanUrlPlaceholder: 'http://192.168.1.100:3000',
+        lanUrlFooter: '如果服务器在同一网络上且公共 URL 无法访问（发夹 NAT），请在此输入局域网地址。应用将自动使用最先响应的 URL。',
+        connectedViaLan: '已通过局域网连接',
+        connectedViaPublic: '已通过公共 URL 连接',
     },
 
     sessionInfo: {

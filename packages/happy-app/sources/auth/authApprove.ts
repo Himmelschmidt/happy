@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 import { encodeBase64 } from "../encryption/base64";
-import { getServerUrl } from "@/sync/serverConfig";
+import { getResolvedServerUrl } from "@/sync/serverResolver";
 
 interface AuthRequestStatus {
     status: 'not_found' | 'pending' | 'authorized';
@@ -9,7 +9,7 @@ interface AuthRequestStatus {
 }
 
 export async function authApprove(token: string, publicKey: Uint8Array, answerV1: Uint8Array, answerV2: Uint8Array) {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     const publicKeyBase64 = encodeBase64(publicKey);
     
     // First, check the auth request status

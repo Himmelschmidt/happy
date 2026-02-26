@@ -1,6 +1,6 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 
 export interface UsageDataPoint {
     timestamp: number;
@@ -27,7 +27,7 @@ export async function queryUsage(
     credentials: AuthCredentials,
     params: UsageQueryParams = {}
 ): Promise<UsageResponse> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/usage/query`, {

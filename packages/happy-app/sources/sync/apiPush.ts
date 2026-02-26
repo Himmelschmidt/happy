@@ -1,9 +1,9 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 
 export async function registerPushToken(credentials: AuthCredentials, token: string): Promise<void> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
     await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/push-tokens`, {
             method: 'POST',

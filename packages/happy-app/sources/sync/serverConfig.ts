@@ -4,6 +4,7 @@ import { MMKV } from 'react-native-mmkv';
 const serverConfigStorage = new MMKV({ id: 'server-config' });
 
 const SERVER_KEY = 'custom-server-url';
+const LAN_URL_KEY = 'custom-lan-url';
 const DEFAULT_SERVER_URL = 'https://api.cluster-fluster.com';
 
 export function getServerUrl(): string {
@@ -17,6 +18,18 @@ export function setServerUrl(url: string | null): void {
         serverConfigStorage.set(SERVER_KEY, url.trim());
     } else {
         serverConfigStorage.delete(SERVER_KEY);
+    }
+}
+
+export function getManualLanUrl(): string | null {
+    return serverConfigStorage.getString(LAN_URL_KEY) ?? null;
+}
+
+export function setManualLanUrl(url: string | null): void {
+    if (url && url.trim()) {
+        serverConfigStorage.set(LAN_URL_KEY, url.trim());
+    } else {
+        serverConfigStorage.delete(LAN_URL_KEY);
     }
 }
 

@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client';
 import { TokenStorage } from '@/auth/tokenStorage';
 import { Encryption } from './encryption/encryption';
 import * as Network from 'expo-network';
+import { getResolvedServerUrl, resolveNow, notifyConnectionFailed } from './serverResolver';
 
 //
 // Types
@@ -35,6 +36,7 @@ class ApiSocket {
     private statusListeners: Set<(status: 'disconnected' | 'connecting' | 'connected' | 'error') => void> = new Set();
     private currentStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
     private networkSubscription: { remove: () => void } | null = null;
+    private consecutiveErrors: number = 0;
 
     //
     // Initialization
@@ -56,8 +58,10 @@ class ApiSocket {
         }
 
         this.updateStatus('connecting');
+        this.consecutiveErrors = 0;
 
-        this.socket = io(this.config.endpoint, {
+        const endpoint = getResolvedServerUrl();
+        this.socket = io(endpoint, {
             path: '/v1/updates',
             auth: {
                 token: this.config.token,
@@ -195,7 +199,7 @@ class ApiSocket {
             throw new Error('No authentication credentials');
         }
 
-        const url = `${this.config.endpoint}${path}`;
+        const url = `${getResolvedServerUrl()}${path}`;
         const headers = {
             'Authorization': `Bearer ${credentials.token}`,
             ...options?.headers
@@ -266,11 +270,14 @@ class ApiSocket {
         this.cleanupNetworkListener();
         this.networkSubscription = Network.addNetworkStateListener((state) => {
             if (state.isConnected && state.isInternetReachable !== false) {
-                if (this.socket && !this.socket.connected) {
-                    // Force a fresh reconnect when network comes back
-                    this.socket.disconnect();
-                    this.socket.connect();
-                }
+                // Network came back (maybe switched WiFi) — re-resolve URL and reconnect
+                resolveNow().then(() => {
+                    if (this.socket && !this.socket.connected) {
+                        this.socket.disconnect();
+                        this.socket = null;
+                        this.connect();
+                    }
+                });
             }
         });
     }
@@ -289,6 +296,7 @@ class ApiSocket {
         this.socket.on('connect', () => {
             // console.log('🔌 SyncSocket: Connected, recovered: ' + this.socket?.recovered);
             // console.log('🔌 SyncSocket: Socket ID:', this.socket?.id);
+            this.consecutiveErrors = 0;
             this.updateStatus('connected');
             if (!this.socket?.recovered) {
                 this.reconnectedListeners.forEach(listener => listener());
@@ -304,6 +312,18 @@ class ApiSocket {
         this.socket.on('connect_error', (error) => {
             // console.error('🔌 SyncSocket: Connection error', error);
             this.updateStatus('error');
+            this.consecutiveErrors++;
+            if (this.consecutiveErrors >= 5) {
+                this.consecutiveErrors = 0;
+                // Too many errors — re-resolve URL and reconnect
+                resolveNow().then(() => {
+                    if (this.socket && this.config) {
+                        this.socket.disconnect();
+                        this.socket = null;
+                        this.connect();
+                    }
+                });
+            }
         });
 
         this.socket.on('error', (error) => {

@@ -1,6 +1,6 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
-import { getServerUrl } from './serverConfig';
+import { getResolvedServerUrl } from './serverResolver';
 
 /**
  * Connect a service to the user's account
@@ -10,7 +10,7 @@ export async function connectService(
     service: string,
     token: any
 ): Promise<void> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/connect/${service}/register`, {
@@ -37,7 +37,7 @@ export async function connectService(
  * Disconnect a connected service from the user's account
  */
 export async function disconnectService(credentials: AuthCredentials, service: string): Promise<void> {
-    const API_ENDPOINT = getServerUrl();
+    const API_ENDPOINT = getResolvedServerUrl();
 
     return await backoff(async () => {
         const response = await fetch(`${API_ENDPOINT}/v1/connect/${service}`, {

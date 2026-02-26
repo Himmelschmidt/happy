@@ -322,7 +322,12 @@ export const pt: TranslationStructure = {
         failedToConnectToServer: 'Falha ao conectar com o servidor',
         currentlyUsingCustomServer: 'Atualmente usando servidor personalizado',
         customServerUrlLabel: 'URL do servidor personalizado',
-        advancedFeatureFooter: 'Este é um recurso avançado. Altere o servidor apenas se souber o que está fazendo. Você precisará sair e entrar novamente após alterar servidores.'
+        advancedFeatureFooter: 'Este é um recurso avançado. Altere o servidor apenas se souber o que está fazendo. Você precisará sair e entrar novamente após alterar servidores.',
+        lanUrlLabel: 'URL da rede local',
+        lanUrlPlaceholder: 'http://192.168.1.100:3000',
+        lanUrlFooter: 'Se o servidor está na mesma rede e o URL público não é acessível (hairpin NAT), insira o endereço LAN aqui. O app usará automaticamente o URL que responder primeiro.',
+        connectedViaLan: 'Conectado via LAN',
+        connectedViaPublic: 'Conectado via URL público',
     },
 
     sessionInfo: {

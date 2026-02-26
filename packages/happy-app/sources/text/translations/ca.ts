@@ -322,7 +322,12 @@ export const ca: TranslationStructure = {
         failedToConnectToServer: 'Ha fallat la connexió amb el servidor',
         currentlyUsingCustomServer: 'Actualment utilitzant un servidor personalitzat',
         customServerUrlLabel: 'URL del servidor personalitzat',
-        advancedFeatureFooter: 'Aquesta és una funció avançada. Només canvia el servidor si saps el que fas. Hauràs de tancar la sessió i tornar-la a iniciar després de canviar els servidors.'
+        advancedFeatureFooter: 'Aquesta és una funció avançada. Només canvia el servidor si saps el que fas. Hauràs de tancar la sessió i tornar-la a iniciar després de canviar els servidors.',
+        lanUrlLabel: 'URL de xarxa local',
+        lanUrlPlaceholder: 'http://192.168.1.100:3000',
+        lanUrlFooter: "Si el servidor és a la mateixa xarxa i l'URL pública no és accessible (hairpin NAT), introdueix l'adreça LAN aquí. L'app utilitzarà automàticament l'URL que respongui primer.",
+        connectedViaLan: 'Connectat via LAN',
+        connectedViaPublic: 'Connectat via URL pública',
     },
 
     sessionInfo: {

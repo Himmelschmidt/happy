@@ -361,7 +361,12 @@ export const ja: TranslationStructure = {
         failedToConnectToServer: 'サーバーへの接続に失敗しました',
         currentlyUsingCustomServer: '現在カスタムサーバーを使用中',
         customServerUrlLabel: 'カスタムサーバーURL',
-        advancedFeatureFooter: "これは高度な機能です。何をしているか理解している場合のみサーバーを変更してください。サーバー変更後は再度ログインが必要です。"
+        advancedFeatureFooter: "これは高度な機能です。何をしているか理解している場合のみサーバーを変更してください。サーバー変更後は再度ログインが必要です。",
+        lanUrlLabel: 'LAN URL',
+        lanUrlPlaceholder: 'http://192.168.1.100:3000',
+        lanUrlFooter: 'サーバーが同じネットワーク上にあり、パブリックURLに到達できない場合（ヘアピンNAT）、ここにLANアドレスを入力してください。アプリは最初に応答するURLを自動的に使用します。',
+        connectedViaLan: 'LAN経由で接続中',
+        connectedViaPublic: 'パブリックURL経由で接続中',
     },
 
     sessionInfo: {
