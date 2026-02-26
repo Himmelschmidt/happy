@@ -5,6 +5,7 @@ import { ANDROID_UP_TO_DATE, IOS_UP_TO_DATE } from "@/versions";
 
 export function versionRoutes(app: Fastify) {
     app.post('/v1/version', {
+        bodyLimit: 64 * 1024,
         schema: {
             body: z.object({
                 platform: z.string(),

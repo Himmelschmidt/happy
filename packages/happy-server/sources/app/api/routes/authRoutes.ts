@@ -7,6 +7,7 @@ import { log } from "@/utils/log";
 
 export function authRoutes(app: Fastify) {
     app.post('/v1/auth', {
+        bodyLimit: 64 * 1024,
         schema: {
             body: z.object({
                 publicKey: z.string(),
@@ -39,6 +40,7 @@ export function authRoutes(app: Fastify) {
     });
 
     app.post('/v1/auth/request', {
+        bodyLimit: 64 * 1024,
         schema: {
             body: z.object({
                 publicKey: z.string(),
@@ -167,6 +169,7 @@ export function authRoutes(app: Fastify) {
 
     // Account auth request
     app.post('/v1/auth/account/request', {
+        bodyLimit: 64 * 1024,
         schema: {
             body: z.object({
                 publicKey: z.string(),
