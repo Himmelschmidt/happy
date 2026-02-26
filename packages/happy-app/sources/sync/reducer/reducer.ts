@@ -124,6 +124,7 @@ type ReducerMessage = {
     role: 'user' | 'agent';
     text: string | null;
     isThinking?: boolean;
+    images?: Array<{ mediaType: string; base64: string }>;
     event: AgentEvent | null;
     tool: ToolCall | null;
     meta?: MessageMeta;
@@ -608,6 +609,7 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                 role: 'user',
                 createdAt: msg.createdAt,
                 text: msg.content.text,
+                ...(msg.content.type === 'image' && { images: msg.content.images }),
                 tool: null,
                 event: null,
                 meta: msg.meta,
@@ -1116,6 +1118,7 @@ function convertReducerMessageToMessage(reducerMsg: ReducerMessage, state: Reduc
             kind: 'user-text',
             text: reducerMsg.text,
             ...(reducerMsg.meta?.displayText && { displayText: reducerMsg.meta.displayText }),
+            ...(reducerMsg.images && { images: reducerMsg.images }),
             meta: reducerMsg.meta
         };
     } else if (reducerMsg.role === 'agent' && reducerMsg.text !== null) {

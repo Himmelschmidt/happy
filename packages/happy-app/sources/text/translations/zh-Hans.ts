@@ -879,6 +879,13 @@ export const zhHans: TranslationStructure = {
         noData: '暂无使用数据',
     },
 
+    imageAttachment: {
+        pickSource: '附加图片',
+        photoLibrary: '照片库',
+        camera: '相机',
+        removeImage: '移除',
+    },
+
     profiles: {
         title: '配置文件',
         subtitle: '管理您的配置文件',

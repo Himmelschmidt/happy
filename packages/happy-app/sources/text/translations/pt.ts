@@ -877,6 +877,13 @@ export const pt: TranslationStructure = {
         noData: 'Nenhum dado de uso disponível',
     },
 
+    imageAttachment: {
+        pickSource: 'Anexar imagem',
+        photoLibrary: 'Biblioteca de fotos',
+        camera: 'Câmera',
+        removeImage: 'Remover',
+    },
+
     profiles: {
         title: 'Perfis',
         subtitle: 'Gerencie seus perfis de configuração',

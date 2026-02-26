@@ -206,10 +206,17 @@ export type CreateSessionResponse = z.infer<typeof CreateSessionResponseSchema>
 
 export const UserMessageSchema = z.object({
   role: z.literal('user'),
-  content: z.object({
-    type: z.literal('text'),
-    text: z.string()
-  }),
+  content: z.discriminatedUnion('type', [
+    z.object({ type: z.literal('text'), text: z.string() }),
+    z.object({
+      type: z.literal('image'),
+      text: z.string(),
+      images: z.array(z.object({
+        mediaType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
+        base64: z.string(),
+      })),
+    }),
+  ]),
   localKey: z.string().optional(), // Mobile messages include this
   meta: MessageMetaSchema.optional()
 })

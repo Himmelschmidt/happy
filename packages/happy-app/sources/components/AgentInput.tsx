@@ -1,6 +1,6 @@
 import { Ionicons, Octicons } from '@expo/vector-icons';
 import * as React from 'react';
-import { View, Platform, useWindowDimensions, ViewStyle, Text, ActivityIndicator, TouchableWithoutFeedback, Image as RNImage, Pressable } from 'react-native';
+import { View, Platform, useWindowDimensions, ViewStyle, Text, ActivityIndicator, TouchableWithoutFeedback, Image as RNImage, Pressable, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { layout } from './layout';
 import { MultiTextInput, KeyPressEvent } from './MultiTextInput';
@@ -76,6 +76,9 @@ interface AgentInputProps {
     minHeight?: number;
     profileId?: string | null;
     onProfileClick?: () => void;
+    pendingImages?: Array<{ mediaType: string; base64: string }>;
+    onAddImage?: () => void;
+    onRemoveImage?: (index: number) => void;
 }
 
 const MAX_CONTEXT_SIZE = 190000;
@@ -301,6 +304,8 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
     const screenWidth = useWindowDimensions().width;
 
     const hasText = props.value.trim().length > 0;
+    const hasPendingImages = (props.pendingImages?.length ?? 0) > 0;
+    const canSend = hasText || hasPendingImages;
 
     // Check if this is a Codex or Gemini session
     // Use metadata.flavor for existing sessions, agentType prop for new sessions
@@ -501,7 +506,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
         // Original key handling
         if (Platform.OS === 'web') {
             if (agentInputEnterToSend && event.key === 'Enter' && !event.shiftKey) {
-                if (props.value.trim()) {
+                if (props.value.trim() || (props.pendingImages?.length ?? 0) > 0) {
                     props.onSend();
                     return true; // Key was handled
                 }
@@ -956,10 +961,46 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                         />
                     </View>
 
+                    {/* Image preview strip */}
+                    {hasPendingImages && (
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                            contentContainerStyle={{ gap: 8 }}
+                        >
+                            {props.pendingImages!.map((img, index) => (
+                                <View key={index} style={{ position: 'relative' }}>
+                                    <RNImage
+                                        source={{ uri: `data:${img.mediaType};base64,${img.base64}` }}
+                                        style={{ width: 60, height: 60, borderRadius: 8 }}
+                                    />
+                                    <Pressable
+                                        onPress={() => props.onRemoveImage?.(index)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: -6,
+                                            right: -6,
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: 10,
+                                            backgroundColor: theme.colors.textDestructive,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                        hitSlop={4}
+                                    >
+                                        <Ionicons name="close" size={12} color="#fff" />
+                                    </Pressable>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    )}
+
                     {/* Action buttons below input */}
                     <View style={styles.actionButtonsContainer}>
                         <View style={{ flexDirection: 'column', flex: 1, gap: 2 }}>
-                            {/* Row 1: Settings, Profile (FIRST), Agent, Abort, Git Status */}
+                            {/* Row 1: Settings, Image, Profile, Agent, Abort, Git Status */}
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <View style={styles.actionButtonsLeft}>
 
@@ -981,6 +1022,33 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                     >
                                         <Octicons
                                             name={'gear'}
+                                            size={16}
+                                            color={theme.colors.button.secondary.tint}
+                                        />
+                                    </Pressable>
+                                )}
+
+                                {/* Image attachment button - only for Claude sessions */}
+                                {props.onAddImage && (
+                                    <Pressable
+                                        onPress={() => {
+                                            hapticsLight();
+                                            props.onAddImage?.();
+                                        }}
+                                        hitSlop={{ top: 5, bottom: 10, left: 0, right: 0 }}
+                                        style={(p) => ({
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            borderRadius: Platform.select({ default: 16, android: 20 }),
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 6,
+                                            justifyContent: 'center',
+                                            height: 32,
+                                            opacity: p.pressed ? 0.7 : 1,
+                                        })}
+                                    >
+                                        <Ionicons
+                                            name="image-outline"
                                             size={16}
                                             color={theme.colors.button.secondary.tint}
                                         />
@@ -1101,7 +1169,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                 <View
                                     style={[
                                         styles.sendButton,
-                                        (hasText || props.isSending || (props.onMicPress && !props.isMicActive))
+                                        (canSend || props.isSending || (props.onMicPress && !props.isMicActive))
                                             ? styles.sendButtonActive
                                             : styles.sendButtonInactive
                                     ]}
@@ -1117,20 +1185,20 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                         hitSlop={{ top: 5, bottom: 10, left: 0, right: 0 }}
                                         onPress={() => {
                                             hapticsLight();
-                                            if (hasText) {
+                                            if (canSend) {
                                                 props.onSend();
                                             } else {
                                                 props.onMicPress?.();
                                             }
                                         }}
-                                        disabled={props.isSendDisabled || props.isSending || (!hasText && !props.onMicPress)}
+                                        disabled={props.isSendDisabled || props.isSending || (!canSend && !props.onMicPress)}
                                     >
                                         {props.isSending ? (
                                             <ActivityIndicator
                                                 size="small"
                                                 color={theme.colors.button.primary.tint}
                                             />
-                                        ) : hasText ? (
+                                        ) : canSend ? (
                                             <Octicons
                                                 name="arrow-up"
                                                 size={16}

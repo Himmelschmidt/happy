@@ -37,6 +37,7 @@ import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
 import type { ModelMode, PermissionMode } from '@/components/PermissionModeSelector';
+import { useImagePicker, PickedImage } from '@/hooks/useImagePicker';
 
 export const SessionView = React.memo((props: { id: string }) => {
     const sessionId = props.id;
@@ -205,6 +206,39 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
     // Use draft hook for auto-saving message drafts
     const { clearDraft } = useDraft(sessionId, message, setMessage);
 
+    // Image picker state - only for Claude sessions
+    const isClaude = flavor === 'claude' || !flavor;
+    const [pendingImages, setPendingImages] = React.useState<PickedImage[]>([]);
+    const { pickFromLibrary, pickFromCamera } = useImagePicker();
+
+    const handleAddImage = React.useCallback(() => {
+        Modal.alert(t('imageAttachment.pickSource'), undefined, [
+            {
+                text: t('imageAttachment.photoLibrary'),
+                onPress: async () => {
+                    const images = await pickFromLibrary();
+                    if (images.length > 0) {
+                        setPendingImages(prev => [...prev, ...images].slice(0, 4));
+                    }
+                }
+            },
+            {
+                text: t('imageAttachment.camera'),
+                onPress: async () => {
+                    const images = await pickFromCamera();
+                    if (images.length > 0) {
+                        setPendingImages(prev => [...prev, ...images].slice(0, 4));
+                    }
+                }
+            },
+            { text: t('common.cancel'), style: 'cancel' }
+        ]);
+    }, [pickFromLibrary, pickFromCamera]);
+
+    const handleRemoveImage = React.useCallback((index: number) => {
+        setPendingImages(prev => prev.filter((_, i) => i !== index));
+    }, []);
+
     // Handle dismissing CLI version warning
     const handleDismissCliWarning = React.useCallback(() => {
         if (machineId && cliVersion) {
@@ -317,10 +351,18 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 isPulsing: sessionStatus.isPulsing
             }}
             onSend={() => {
-                if (message.trim()) {
+                const hasText = message.trim().length > 0;
+                const hasImages = pendingImages.length > 0;
+                if (hasText || hasImages) {
+                    const text = message;
                     setMessage('');
                     clearDraft();
-                    sync.sendMessage(sessionId, message);
+                    if (hasImages) {
+                        sync.sendImageMessage(sessionId, pendingImages, text);
+                        setPendingImages([]);
+                    } else {
+                        sync.sendMessage(sessionId, text);
+                    }
                     trackMessageSent();
                 }
             }}
@@ -346,6 +388,9 @@ function SessionViewLoaded({ sessionId, session }: { sessionId: string, session:
                 contextSize: session.latestUsage.contextSize
             } : undefined}
             alwaysShowContextSize={alwaysShowContextSize}
+            pendingImages={isClaude ? pendingImages : undefined}
+            onAddImage={isClaude ? handleAddImage : undefined}
+            onRemoveImage={isClaude ? handleRemoveImage : undefined}
         />
     );
 

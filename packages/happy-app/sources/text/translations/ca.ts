@@ -877,6 +877,13 @@ export const ca: TranslationStructure = {
         noData: "No hi ha dades d'ús disponibles",
     },
 
+    imageAttachment: {
+        pickSource: 'Adjuntar imatge',
+        photoLibrary: 'Biblioteca de fotos',
+        camera: 'Càmera',
+        removeImage: 'Eliminar',
+    },
+
     profiles: {
         title: 'Perfils',
         subtitle: 'Gestiona els teus perfils de configuració',

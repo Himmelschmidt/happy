@@ -886,6 +886,13 @@ export const zhHant: TranslationStructure = {
         friendAcceptedGeneric: '好友請求已接受',
     },
 
+    imageAttachment: {
+        pickSource: '附加圖片',
+        photoLibrary: '照片庫',
+        camera: '相機',
+        removeImage: '移除',
+    },
+
     profiles: {
         // Profile management feature
         title: '設定檔',

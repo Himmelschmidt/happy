@@ -74,6 +74,13 @@ export const ja: TranslationStructure = {
         status: 'ステータス',
     },
 
+    imageAttachment: {
+        pickSource: '画像を添付',
+        photoLibrary: 'フォトライブラリ',
+        camera: 'カメラ',
+        removeImage: '削除',
+    },
+
     profiles: {
         title: 'プロファイル',
         subtitle: 'セッション用の環境変数プロファイルを管理',

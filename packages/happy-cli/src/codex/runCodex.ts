@@ -540,14 +540,14 @@ export async function runCodex(opts: {
         logger.debug('[codex]: client.connect done');
         let wasCreated = false;
         let currentModeHash: string | null = null;
-        let pending: { message: string; mode: EnhancedMode; isolate: boolean; hash: string } | null = null;
+        let pending: { message: string | import('@/utils/MessageQueue2').ContentBlock[]; mode: EnhancedMode; isolate: boolean; hash: string } | null = null;
         // If we restart (e.g., mode change), use this to carry a resume file
         let nextExperimentalResume: string | null = null;
 
         while (!shouldExit) {
             logActiveHandles('loop-top');
             // Get next batch; respect mode boundaries like Claude
-            let message: { message: string; mode: EnhancedMode; isolate: boolean; hash: string } | null = pending;
+            let message: { message: string | import('@/utils/MessageQueue2').ContentBlock[]; mode: EnhancedMode; isolate: boolean; hash: string } | null = pending;
             pending = null;
             if (!message) {
                 // Capture the current signal to distinguish idle-abort from queue close
@@ -568,6 +568,13 @@ export async function runCodex(opts: {
             // Defensive check for TS narrowing
             if (!message) {
                 break;
+            }
+
+            // TODO: Add image support for Codex provider (currently only Claude supports images)
+            // Codex only supports text messages — skip image content blocks
+            if (typeof message.message !== 'string') {
+                logger.debug('[codex]: Skipping non-text message (ContentBlock[])');
+                continue;
             }
 
             // If a session exists and mode changed, restart on next iteration

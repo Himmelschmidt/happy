@@ -908,6 +908,13 @@ export const ru: TranslationStructure = {
         friendAcceptedGeneric: 'Запрос в друзья принят',
     },
 
+    imageAttachment: {
+        pickSource: 'Прикрепить изображение',
+        photoLibrary: 'Галерея',
+        camera: 'Камера',
+        removeImage: 'Удалить',
+    },
+
     profiles: {
         // Profile management feature
         title: 'Профили',

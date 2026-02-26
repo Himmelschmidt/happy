@@ -13,6 +13,7 @@ import { hashObject } from '@/utils/deterministicJson';
 import { startCaffeinate, stopCaffeinate } from '@/utils/caffeinate';
 import { extractSDKMetadataAsync } from '@/claude/sdk/metadataExtractor';
 import { parseSpecialCommand } from '@/parsers/specialCommands';
+import type { ContentBlock } from '@/utils/MessageQueue2';
 import { getEnvironmentInfo } from '@/ui/doctor';
 import { configuration } from '@/configuration';
 import { notifyDaemonSessionStarted } from '@/daemon/controlClient';
@@ -335,8 +336,10 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
             logger.debug(`[loop] User message received with no disallowed tools override, using current: ${currentDisallowedTools ? currentDisallowedTools.join(', ') : 'none'}`);
         }
 
-        // Check for special commands before processing
-        const specialCommand = parseSpecialCommand(message.content.text);
+        // Check for special commands before processing (only for text messages)
+        const specialCommand = message.content.type === 'text'
+            ? parseSpecialCommand(message.content.text)
+            : { type: 'none' as const };
 
         if (specialCommand.type === 'compact') {
             logger.debug('[start] Detected /compact command');
@@ -380,7 +383,18 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
             allowedTools: messageAllowedTools,
             disallowedTools: messageDisallowedTools
         };
-        messageQueue.push(message.content.text, enhancedMode);
+        if (message.content.type === 'image') {
+            const blocks: ContentBlock[] = [];
+            for (const img of message.content.images) {
+                blocks.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } });
+            }
+            if (message.content.text) {
+                blocks.push({ type: 'text', text: message.content.text });
+            }
+            messageQueue.pushIsolateAndClear(blocks, enhancedMode);
+        } else {
+            messageQueue.push(message.content.text, enhancedMode);
+        }
         logger.debugLargeJson('User message pushed to queue:', message)
     });
 

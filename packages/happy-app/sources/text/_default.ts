@@ -885,6 +885,13 @@ export const en = {
         friendAcceptedGeneric: 'Friend request accepted',
     },
 
+    imageAttachment: {
+        pickSource: 'Attach Image',
+        photoLibrary: 'Photo Library',
+        camera: 'Camera',
+        removeImage: 'Remove',
+    },
+
     profiles: {
         // Profile management feature
         title: 'Profiles',

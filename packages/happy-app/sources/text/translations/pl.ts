@@ -909,6 +909,13 @@ export const pl: TranslationStructure = {
         friendAcceptedGeneric: 'Zaproszenie do znajomych zaakceptowane',
     },
 
+    imageAttachment: {
+        pickSource: 'Dołącz zdjęcie',
+        photoLibrary: 'Biblioteka zdjęć',
+        camera: 'Aparat',
+        removeImage: 'Usuń',
+    },
+
     profiles: {
         // Profile management feature
         title: 'Profile',

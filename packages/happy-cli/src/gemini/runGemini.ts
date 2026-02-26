@@ -888,10 +888,10 @@ export async function runGemini(opts: {
 
   try {
     let currentModeHash: string | null = null;
-    let pending: { message: string; mode: GeminiMode; isolate: boolean; hash: string } | null = null;
+    let pending: { message: string | import('@/utils/MessageQueue2').ContentBlock[]; mode: GeminiMode; isolate: boolean; hash: string } | null = null;
 
     while (!shouldExit) {
-      let message: { message: string; mode: GeminiMode; isolate: boolean; hash: string } | null = pending;
+      let message: { message: string | import('@/utils/MessageQueue2').ContentBlock[]; mode: GeminiMode; isolate: boolean; hash: string } | null = pending;
       pending = null;
 
       if (!message) {
@@ -912,6 +912,13 @@ export async function runGemini(opts: {
 
       if (!message) {
         break;
+      }
+
+      // TODO: Add image support for Gemini provider (currently only Claude supports images)
+      // Gemini only supports text messages — skip image content blocks
+      if (typeof message.message !== 'string') {
+        logger.debug('[gemini] Skipping non-text message (ContentBlock[])');
+        continue;
       }
 
       // Track if we need to inject conversation history (after model change)

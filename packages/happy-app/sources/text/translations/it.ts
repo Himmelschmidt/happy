@@ -71,6 +71,13 @@ export const it: TranslationStructure = {
         status: 'Stato',
     },
 
+    imageAttachment: {
+        pickSource: 'Allega immagine',
+        photoLibrary: 'Libreria foto',
+        camera: 'Fotocamera',
+        removeImage: 'Rimuovi',
+    },
+
     profiles: {
         title: 'Profili',
         subtitle: 'Gestisci i profili delle variabili ambiente per le sessioni',

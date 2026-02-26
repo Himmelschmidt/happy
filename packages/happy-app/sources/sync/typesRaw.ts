@@ -440,10 +440,17 @@ const rawRecordSchema = z.preprocess(
         }),
         z.object({
             role: z.literal('user'),
-            content: z.object({
-                type: z.literal('text'),
-                text: z.string()
-            }),
+            content: z.discriminatedUnion('type', [
+                z.object({ type: z.literal('text'), text: z.string() }),
+                z.object({
+                    type: z.literal('image'),
+                    text: z.string(),
+                    images: z.array(z.object({
+                        mediaType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
+                        base64: z.string(),
+                    })),
+                }),
+            ]),
             meta: MessageMetaSchema.optional()
         }),
         z.object({
@@ -514,6 +521,10 @@ export type NormalizedMessage = ({
     content: {
         type: 'text';
         text: string;
+    } | {
+        type: 'image';
+        text: string;
+        images: Array<{ mediaType: string; base64: string }>;
     }
 } | {
     role: 'agent'

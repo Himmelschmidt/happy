@@ -7,6 +7,7 @@ import { projectPath } from "@/projectPath";
 import { parseSpecialCommand } from "@/parsers/specialCommands";
 import { logger } from "@/lib";
 import { PushableAsyncIterable } from "@/utils/PushableAsyncIterable";
+import type { ContentBlock } from "@/utils/MessageQueue2";
 import { getProjectPath } from "./utils/path";
 import { awaitFileExist } from "@/modules/watcher/awaitFileExist";
 import { systemPrompt } from "./utils/systemPrompt";
@@ -30,7 +31,7 @@ export async function claudeRemote(opts: {
     jsRuntime?: JsRuntime,
 
     // Dynamic parameters
-    nextMessage: () => Promise<{ message: string, mode: EnhancedMode } | null>,
+    nextMessage: () => Promise<{ message: string | ContentBlock[], mode: EnhancedMode } | null>,
     onReady: () => void,
     isAborted: (toolCallId: string) => boolean,
 
@@ -87,8 +88,10 @@ export async function claudeRemote(opts: {
         return;
     }
 
-    // Handle special commands
-    const specialCommand = parseSpecialCommand(initial.message);
+    // Handle special commands (only for string messages)
+    const specialCommand = typeof initial.message === 'string'
+        ? parseSpecialCommand(initial.message)
+        : { type: 'none' as const };
 
     // Handle /clear command
     if (specialCommand.type === 'clear') {

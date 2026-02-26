@@ -1,5 +1,5 @@
 import * as React from "react";
-import { View, Text } from "react-native";
+import { View, Text, Image as RNImage } from "react-native";
 import { StyleSheet } from 'react-native-unistyles';
 import { MarkdownView } from "./markdown/MarkdownView";
 import { t } from '@/text';
@@ -76,10 +76,19 @@ function UserTextBlock(props: {
   return (
     <View style={styles.userMessageContainer}>
       <View style={styles.userMessageBubble}>
+        {props.message.images && props.message.images.length > 0 && (
+          <View style={styles.userImageContainer}>
+            {props.message.images.map((img, i) => (
+              <RNImage
+                key={i}
+                source={{ uri: `data:${img.mediaType};base64,${img.base64}` }}
+                style={{ width: 200, height: 200, borderRadius: 8 }}
+                resizeMode="cover"
+              />
+            ))}
+          </View>
+        )}
         <MarkdownView markdown={props.message.displayText || props.message.text} onOptionPress={handleOptionPress} />
-        {/* {__DEV__ && (
-          <Text style={styles.debugText}>{JSON.stringify(props.message.meta)}</Text>
-        )} */}
       </View>
     </View>
   );
@@ -196,6 +205,12 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: 12,
     marginBottom: 12,
     maxWidth: '100%',
+  },
+  userImageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 8,
   },
   agentMessageContainer: {
     marginHorizontal: 16,

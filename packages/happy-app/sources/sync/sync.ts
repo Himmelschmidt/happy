@@ -438,65 +438,33 @@ class Sync {
         this.backgroundSendStartedAt = null;
     }
 
-    async sendMessage(sessionId: string, text: string, displayText?: string) {
+    /**
+     * Determine sentFrom platform identifier for message metadata.
+     */
+    private getSentFromPlatform(): string {
+        if (Platform.OS === 'web') {
+            return 'web';
+        } else if (Platform.OS === 'android') {
+            return 'android';
+        } else if (Platform.OS === 'ios') {
+            return isRunningOnMac() ? 'mac' : 'ios';
+        }
+        return 'web'; // fallback
+    }
 
-        // Get encryption
+    /**
+     * Encrypt, normalize, and enqueue a user message for sending.
+     */
+    private async enqueueOutgoingMessage(sessionId: string, content: RawRecord) {
         const encryption = this.encryption.getSessionEncryption(sessionId);
-        if (!encryption) { // Should never happen
+        if (!encryption) {
             console.error(`Session ${sessionId} not found`);
             return;
         }
 
-        // Get session data from storage
-        const session = storage.getState().sessions[sessionId];
-        if (!session) {
-            console.error(`Session ${sessionId} not found in storage`);
-            return;
-        }
-
-        const { permissionMode, model } = resolveMessageModeMeta(session);
-
-        // Generate local ID
         const localId = randomUUID();
-
-        // Determine sentFrom based on platform
-        let sentFrom: string;
-        if (Platform.OS === 'web') {
-            sentFrom = 'web';
-        } else if (Platform.OS === 'android') {
-            sentFrom = 'android';
-        } else if (Platform.OS === 'ios') {
-            // Check if running on Mac (Catalyst or Designed for iPad on Mac)
-            if (isRunningOnMac()) {
-                sentFrom = 'mac';
-            } else {
-                sentFrom = 'ios';
-            }
-        } else {
-            sentFrom = 'web'; // fallback
-        }
-
-        const fallbackModel: string | null = null;
-
-        // Create user message content with metadata
-        const content: RawRecord = {
-            role: 'user',
-            content: {
-                type: 'text',
-                text
-            },
-            meta: {
-                sentFrom,
-                permissionMode,
-                model,
-                fallbackModel,
-                appendSystemPrompt: systemPrompt,
-                ...(displayText && { displayText }) // Add displayText if provided
-            }
-        };
         const encryptedRawRecord = await encryption.encryptRawRecord(content);
 
-        // Add to messages - normalize the raw record
         const createdAt = Date.now();
         const normalizedMessage = normalizeRawMessage(localId, localId, createdAt, content);
         if (normalizedMessage) {
@@ -515,6 +483,69 @@ class Sync {
 
         this.getSendSync(sessionId).invalidate();
         this.maybeStartBackgroundSendWatchdog();
+    }
+
+    async sendMessage(sessionId: string, text: string, displayText?: string) {
+        const session = storage.getState().sessions[sessionId];
+        if (!session) {
+            console.error(`Session ${sessionId} not found in storage`);
+            return;
+        }
+
+        const { permissionMode, model } = resolveMessageModeMeta(session);
+
+        const content: RawRecord = {
+            role: 'user',
+            content: {
+                type: 'text' as const,
+                text
+            },
+            meta: {
+                sentFrom: this.getSentFromPlatform(),
+                permissionMode,
+                model,
+                fallbackModel: null,
+                appendSystemPrompt: systemPrompt,
+                ...(displayText && { displayText })
+            }
+        };
+
+        await this.enqueueOutgoingMessage(sessionId, content);
+    }
+
+    async sendImageMessage(
+        sessionId: string,
+        images: Array<{ mediaType: string; base64: string }>,
+        text: string,
+    ) {
+        const session = storage.getState().sessions[sessionId];
+        if (!session) {
+            console.error(`Session ${sessionId} not found in storage`);
+            return;
+        }
+
+        const { permissionMode, model } = resolveMessageModeMeta(session);
+
+        const content: RawRecord = {
+            role: 'user',
+            content: {
+                type: 'image' as const,
+                text,
+                images: images.map(img => ({
+                    mediaType: img.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+                    base64: img.base64,
+                })),
+            },
+            meta: {
+                sentFrom: this.getSentFromPlatform(),
+                permissionMode,
+                model,
+                fallbackModel: null,
+                appendSystemPrompt: systemPrompt,
+            }
+        };
+
+        await this.enqueueOutgoingMessage(sessionId, content);
     }
 
     applySettings = (delta: Partial<Settings>) => {

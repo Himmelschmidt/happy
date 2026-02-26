@@ -886,6 +886,13 @@ export const es: TranslationStructure = {
         friendAcceptedGeneric: 'Solicitud de amistad aceptada',
     },
 
+    imageAttachment: {
+        pickSource: 'Adjuntar imagen',
+        photoLibrary: 'Biblioteca de fotos',
+        camera: 'Cámara',
+        removeImage: 'Eliminar',
+    },
+
     profiles: {
         // Profile management feature
         title: 'Perfiles',
