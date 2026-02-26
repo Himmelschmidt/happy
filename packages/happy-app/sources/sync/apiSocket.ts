@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { TokenStorage } from '@/auth/tokenStorage';
 import { Encryption } from './encryption/encryption';
+import * as Network from 'expo-network';
 
 //
 // Types
@@ -33,6 +34,7 @@ class ApiSocket {
     private reconnectedListeners: Set<() => void> = new Set();
     private statusListeners: Set<(status: 'disconnected' | 'connecting' | 'connected' | 'error') => void> = new Set();
     private currentStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
+    private networkSubscription: { remove: () => void } | null = null;
 
     //
     // Initialization
@@ -61,7 +63,7 @@ class ApiSocket {
                 token: this.config.token,
                 clientType: 'user-scoped' as const
             },
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
@@ -69,14 +71,28 @@ class ApiSocket {
         });
 
         this.setupEventHandlers();
+        this.setupNetworkListener();
     }
 
     disconnect() {
+        this.cleanupNetworkListener();
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;
         }
         this.updateStatus('disconnected');
+    }
+
+    /**
+     * Force reconnect if socket exists but is disconnected.
+     * If socket is null but config exists, create a fresh connection.
+     */
+    ensureConnected() {
+        if (this.socket && !this.socket.connected) {
+            this.socket.connect();
+        } else if (!this.socket && this.config) {
+            this.connect();
+        }
     }
 
     //
@@ -116,12 +132,14 @@ class ApiSocket {
         if (!sessionEncryption) {
             throw new Error(`Session encryption not found for ${sessionId}`);
         }
-        
+
+        await this.waitForConnection();
+
         const result = await this.socket!.emitWithAck('rpc-call', {
             method: `${sessionId}:${method}`,
             params: await sessionEncryption.encryptRaw(params)
         });
-        
+
         if (result.ok) {
             return await sessionEncryption.decryptRaw(result.result) as R;
         }
@@ -137,6 +155,8 @@ class ApiSocket {
             throw new Error(`Machine encryption not found for ${machineId}`);
         }
 
+        await this.waitForConnection();
+
         const result = await this.socket!.emitWithAck('rpc-call', {
             method: `${machineId}:${method}`,
             params: await machineEncryption.encryptRaw(params)
@@ -149,15 +169,16 @@ class ApiSocket {
     }
 
     send(event: string, data: any) {
-        this.socket!.emit(event, data);
+        if (!this.socket?.connected) {
+            return false;
+        }
+        this.socket.emit(event, data);
         return true;
     }
 
     async emitWithAck<T = any>(event: string, data: any): Promise<T> {
-        if (!this.socket) {
-            throw new Error('Socket not connected');
-        }
-        return await this.socket.emitWithAck(event, data);
+        await this.waitForConnection();
+        return await this.socket!.emitWithAck(event, data);
     }
 
     //
@@ -205,10 +226,59 @@ class ApiSocket {
     // Private Methods
     //
 
+    /**
+     * Wait for the socket to be connected, or throw after timeout.
+     * Resolves immediately if already connected.
+     */
+    private waitForConnection(timeoutMs = 10000): Promise<void> {
+        if (this.socket?.connected) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            if (!this.socket) {
+                reject(new Error('Socket not initialized'));
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                this.socket?.off('connect', onConnect);
+                reject(new Error('Socket connection timeout'));
+            }, timeoutMs);
+
+            const onConnect = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
+
+            this.socket.once('connect', onConnect);
+        });
+    }
+
     private updateStatus(status: 'disconnected' | 'connecting' | 'connected' | 'error') {
         if (this.currentStatus !== status) {
             this.currentStatus = status;
             this.statusListeners.forEach(listener => listener(status));
+        }
+    }
+
+    private setupNetworkListener() {
+        this.cleanupNetworkListener();
+        this.networkSubscription = Network.addNetworkStateListener((state) => {
+            if (state.isConnected && state.isInternetReachable !== false) {
+                if (this.socket && !this.socket.connected) {
+                    // Force a fresh reconnect when network comes back
+                    this.socket.disconnect();
+                    this.socket.connect();
+                }
+            }
+        });
+    }
+
+    private cleanupNetworkListener() {
+        if (this.networkSubscription) {
+            this.networkSubscription.remove();
+            this.networkSubscription = null;
         }
     }
 

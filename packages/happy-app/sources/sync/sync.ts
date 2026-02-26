@@ -137,6 +137,7 @@ class Sync {
                     this.failPendingOutboxMessages('Message failed to send in background after 30s. Please retry.');
                 }
                 log.log('📱 App became active');
+                apiSocket.ensureConnected();
                 this.purchasesSync.invalidate();
                 this.profileSync.invalidate();
                 this.machinesSync.invalidate();
