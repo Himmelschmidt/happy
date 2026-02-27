@@ -56,6 +56,7 @@ export const ca: TranslationStructure = {
         message: 'Missatge',
         files: 'Fitxers',
         fileViewer: 'Visualitzador de fitxers',
+        fileBrowser: 'Explorador de fitxers',
         loading: 'Carregant...',
         retry: 'Torna-ho a provar',
         delete: 'Elimina',
@@ -558,6 +559,17 @@ export const ca: TranslationStructure = {
         file: 'Fitxer',
         fileEmpty: 'El fitxer està buit',
         noChanges: 'No hi ha canvis a mostrar',
+        loadingImage: 'Carregant imatge...',
+        failedToLoadImage: 'No s\'ha pogut carregar la imatge',
+    },
+
+    browse: {
+        browseFiles: 'Explorar fitxers',
+        browseFilesSubtitle: 'Navegar pel directori del projecte',
+        parentDirectory: 'Directori superior',
+        directory: 'Directori',
+        failedToLoadDirectory: 'No s\'ha pogut carregar el directori',
+        emptyDirectory: 'Aquest directori està buit',
     },
 
     settingsVoice: {

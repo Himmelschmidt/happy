@@ -58,6 +58,7 @@ export const ja: TranslationStructure = {
         message: 'メッセージ',
         files: 'ファイル',
         fileViewer: 'ファイルビューアー',
+        fileBrowser: 'ファイルブラウザ',
         loading: '読み込み中...',
         retry: '再試行',
         delete: '削除',
@@ -597,6 +598,17 @@ export const ja: TranslationStructure = {
         file: 'ファイル',
         fileEmpty: 'ファイルは空です',
         noChanges: '表示する変更はありません',
+        loadingImage: '画像を読み込み中...',
+        failedToLoadImage: '画像の読み込みに失敗しました',
+    },
+
+    browse: {
+        browseFiles: 'ファイルを閲覧',
+        browseFilesSubtitle: 'プロジェクトディレクトリをナビゲート',
+        parentDirectory: '親ディレクトリ',
+        directory: 'ディレクトリ',
+        failedToLoadDirectory: 'ディレクトリの読み込みに失敗しました',
+        emptyDirectory: 'このディレクトリは空です',
     },
 
     settingsVoice: {

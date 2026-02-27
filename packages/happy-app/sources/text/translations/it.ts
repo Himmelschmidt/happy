@@ -55,6 +55,7 @@ export const it: TranslationStructure = {
         message: 'Messaggio',
         files: 'File',
         fileViewer: 'Visualizzatore file',
+        fileBrowser: 'Esplora file',
         loading: 'Caricamento...',
         retry: 'Riprova',
         delete: 'Elimina',
@@ -594,6 +595,17 @@ export const it: TranslationStructure = {
         file: 'File',
         fileEmpty: 'File vuoto',
         noChanges: 'Nessuna modifica da mostrare',
+        loadingImage: 'Caricamento immagine...',
+        failedToLoadImage: 'Impossibile caricare l\'immagine',
+    },
+
+    browse: {
+        browseFiles: 'Sfoglia file',
+        browseFilesSubtitle: 'Naviga nella directory del progetto',
+        parentDirectory: 'Directory principale',
+        directory: 'Directory',
+        failedToLoadDirectory: 'Impossibile caricare la directory',
+        emptyDirectory: 'Questa directory è vuota',
     },
 
     settingsVoice: {

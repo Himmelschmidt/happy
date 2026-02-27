@@ -67,6 +67,7 @@ export const ru: TranslationStructure = {
         message: 'Сообщение',
         files: 'Файлы',
         fileViewer: 'Просмотр файла',
+        fileBrowser: 'Обозреватель файлов',
         loading: 'Загрузка...',
         retry: 'Повторить',
         delete: 'Удалить',
@@ -568,6 +569,17 @@ export const ru: TranslationStructure = {
         file: 'Файл',
         fileEmpty: 'Файл пустой',
         noChanges: 'Нет изменений для отображения',
+        loadingImage: 'Загрузка изображения...',
+        failedToLoadImage: 'Не удалось загрузить изображение',
+    },
+
+    browse: {
+        browseFiles: 'Обзор файлов',
+        browseFilesSubtitle: 'Навигация по директории проекта',
+        parentDirectory: 'Родительская директория',
+        directory: 'Директория',
+        failedToLoadDirectory: 'Не удалось загрузить директорию',
+        emptyDirectory: 'Эта директория пуста',
     },
 
     settingsVoice: {

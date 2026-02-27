@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, ScrollView, ActivityIndicator, Platform, Pressable } from 'react-native';
+import { View, ScrollView, ActivityIndicator, Platform, Pressable, Image as RNImage } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import { Text } from '@/components/StyledText';
@@ -17,6 +17,27 @@ interface FileContent {
     content: string;
     encoding: 'utf8' | 'base64';
     isBinary: boolean;
+    isImage?: boolean;
+}
+
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'ico'];
+
+function isImageFile(path: string): boolean {
+    const ext = path.split('.').pop()?.toLowerCase();
+    return ext ? IMAGE_EXTENSIONS.includes(ext) : false;
+}
+
+function getImageMimeType(path: string): string {
+    const ext = path.split('.').pop()?.toLowerCase();
+    switch (ext) {
+        case 'png': return 'image/png';
+        case 'jpg': case 'jpeg': return 'image/jpeg';
+        case 'gif': return 'image/gif';
+        case 'bmp': return 'image/bmp';
+        case 'webp': return 'image/webp';
+        case 'ico': return 'image/x-icon';
+        default: return 'application/octet-stream';
+    }
 }
 
 // Diff display component
@@ -89,6 +110,7 @@ export default function FileScreen() {
     const [displayMode, setDisplayMode] = React.useState<'file' | 'diff'>('diff');
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
+    const [imageDimensions, setImageDimensions] = React.useState<{ width: number; height: number } | null>(null);
 
     // Determine file language from extension
     const getFileLanguage = React.useCallback((path: string): string | null => {
@@ -178,6 +200,31 @@ export default function FileScreen() {
                 
                 // Check if file is likely binary before trying to read
                 if (isBinaryFile(filePath)) {
+                    // If it's an image, fetch the base64 content for display
+                    if (isImageFile(filePath) && sessionId) {
+                        try {
+                            const response = await sessionReadFile(sessionId, filePath);
+                            if (!isCancelled) {
+                                if (response.success && response.content) {
+                                    setFileContent({
+                                        content: response.content,
+                                        encoding: 'base64',
+                                        isBinary: true,
+                                        isImage: true
+                                    });
+                                } else {
+                                    setError(response.error || t('files.failedToLoadImage'));
+                                }
+                                setIsLoading(false);
+                            }
+                        } catch {
+                            if (!isCancelled) {
+                                setError(t('files.failedToLoadImage'));
+                                setIsLoading(false);
+                            }
+                        }
+                        return;
+                    }
                     if (!isCancelled) {
                         setFileContent({
                             content: '',
@@ -334,17 +381,64 @@ export default function FileScreen() {
         );
     }
 
+    if (fileContent?.isBinary && fileContent.isImage && fileContent.content) {
+        const mimeType = getImageMimeType(filePath);
+        const imageUri = `data:${mimeType};base64,${fileContent.content}`;
+        return (
+            <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+                {/* File path header */}
+                <View style={{
+                    padding: 16,
+                    borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                    borderBottomColor: theme.colors.divider,
+                    backgroundColor: theme.colors.surfaceHigh,
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                }}>
+                    <FileIcon fileName={fileName} size={20} />
+                    <Text style={{
+                        fontSize: 14,
+                        color: theme.colors.textSecondary,
+                        marginLeft: 8,
+                        flex: 1,
+                        ...Typography.mono()
+                    }}>
+                        {filePath}
+                    </Text>
+                </View>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ padding: 16, alignItems: 'center' }}
+                    showsVerticalScrollIndicator={true}
+                >
+                    <RNImage
+                        source={{ uri: imageUri }}
+                        style={{
+                            width: '100%',
+                            aspectRatio: imageDimensions ? imageDimensions.width / imageDimensions.height : 1,
+                        }}
+                        resizeMode="contain"
+                        onLoad={(e) => {
+                            const { width, height } = e.nativeEvent.source;
+                            setImageDimensions({ width, height });
+                        }}
+                    />
+                </ScrollView>
+            </View>
+        );
+    }
+
     if (fileContent?.isBinary) {
         return (
-            <View style={{ 
-                flex: 1, 
+            <View style={{
+                flex: 1,
                 backgroundColor: theme.colors.surface,
-                justifyContent: 'center', 
+                justifyContent: 'center',
                 alignItems: 'center',
                 padding: 20
             }}>
-                <Text style={{ 
-                    fontSize: 18, 
+                <Text style={{
+                    fontSize: 18,
                     fontWeight: 'bold',
                     color: theme.colors.textSecondary,
                     marginBottom: 8,
@@ -352,20 +446,20 @@ export default function FileScreen() {
                 }}>
                     {t('files.binaryFile')}
                 </Text>
-                <Text style={{ 
-                    fontSize: 16, 
+                <Text style={{
+                    fontSize: 16,
                     color: theme.colors.textSecondary,
                     textAlign: 'center',
-                    ...Typography.default() 
+                    ...Typography.default()
                 }}>
                     {t('files.cannotDisplayBinary')}
                 </Text>
-                <Text style={{ 
-                    fontSize: 14, 
+                <Text style={{
+                    fontSize: 14,
                     color: '#999',
                     textAlign: 'center',
                     marginTop: 8,
-                    ...Typography.default() 
+                    ...Typography.default()
                 }}>
                     {fileName}
                 </Text>

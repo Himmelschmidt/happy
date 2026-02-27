@@ -56,6 +56,7 @@ export const es: TranslationStructure = {
         message: 'Mensaje',
         files: 'Archivos',
         fileViewer: 'Visor de archivos',
+        fileBrowser: 'Explorador de archivos',
         loading: 'Cargando...',
         retry: 'Reintentar',
         delete: 'Eliminar',
@@ -558,6 +559,17 @@ export const es: TranslationStructure = {
         file: 'Archivo',
         fileEmpty: 'El archivo está vacío',
         noChanges: 'No hay cambios que mostrar',
+        loadingImage: 'Cargando imagen...',
+        failedToLoadImage: 'No se pudo cargar la imagen',
+    },
+
+    browse: {
+        browseFiles: 'Explorar archivos',
+        browseFilesSubtitle: 'Navegar por el directorio del proyecto',
+        parentDirectory: 'Directorio superior',
+        directory: 'Directorio',
+        failedToLoadDirectory: 'No se pudo cargar el directorio',
+        emptyDirectory: 'Este directorio está vacío',
     },
 
     settingsVoice: {

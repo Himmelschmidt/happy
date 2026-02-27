@@ -58,6 +58,7 @@ export const zhHant: TranslationStructure = {
         message: '訊息',
         files: '檔案',
         fileViewer: '檔案檢視器',
+        fileBrowser: '檔案瀏覽器',
         loading: '載入中...',
         retry: '重試',
         delete: '刪除',
@@ -559,6 +560,17 @@ export const zhHant: TranslationStructure = {
         file: '檔案',
         fileEmpty: '檔案為空',
         noChanges: '沒有要顯示的更改',
+        loadingImage: '正在載入圖片...',
+        failedToLoadImage: '載入圖片失敗',
+    },
+
+    browse: {
+        browseFiles: '瀏覽檔案',
+        browseFilesSubtitle: '瀏覽專案目錄',
+        parentDirectory: '上層目錄',
+        directory: '目錄',
+        failedToLoadDirectory: '載入目錄失敗',
+        emptyDirectory: '此目錄為空',
     },
 
     settingsVoice: {

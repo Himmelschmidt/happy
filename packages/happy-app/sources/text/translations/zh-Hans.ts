@@ -58,6 +58,7 @@ export const zhHans: TranslationStructure = {
         message: '消息',
         files: '文件',
         fileViewer: '文件查看器',
+        fileBrowser: '文件浏览器',
         loading: '加载中...',
         retry: '重试',
         delete: '删除',
@@ -560,6 +561,17 @@ export const zhHans: TranslationStructure = {
         file: '文件',
         fileEmpty: '文件为空',
         noChanges: '没有要显示的更改',
+        loadingImage: '正在加载图片...',
+        failedToLoadImage: '加载图片失败',
+    },
+
+    browse: {
+        browseFiles: '浏览文件',
+        browseFilesSubtitle: '浏览项目目录',
+        parentDirectory: '上级目录',
+        directory: '目录',
+        failedToLoadDirectory: '加载目录失败',
+        emptyDirectory: '此目录为空',
     },
 
     settingsVoice: {

@@ -67,6 +67,7 @@ export const pl: TranslationStructure = {
         message: 'Wiadomość',
         files: 'Pliki',
         fileViewer: 'Przeglądarka plików',
+        fileBrowser: 'Przeglądarka plików',
         loading: 'Ładowanie...',
         retry: 'Ponów',
         delete: 'Usuń',
@@ -568,6 +569,17 @@ export const pl: TranslationStructure = {
         file: 'Plik',
         fileEmpty: 'Plik jest pusty',
         noChanges: 'Brak zmian do wyświetlenia',
+        loadingImage: 'Ładowanie obrazu...',
+        failedToLoadImage: 'Nie udało się załadować obrazu',
+    },
+
+    browse: {
+        browseFiles: 'Przeglądaj pliki',
+        browseFilesSubtitle: 'Nawiguj po katalogu projektu',
+        parentDirectory: 'Katalog nadrzędny',
+        directory: 'Katalog',
+        failedToLoadDirectory: 'Nie udało się załadować katalogu',
+        emptyDirectory: 'Ten katalog jest pusty',
     },
 
     settingsVoice: {

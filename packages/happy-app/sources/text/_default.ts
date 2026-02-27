@@ -56,6 +56,7 @@ export const en = {
         message: 'Message',
         files: 'Files',
         fileViewer: 'File Viewer',
+        fileBrowser: 'File Browser',
         loading: 'Loading...',
         retry: 'Retry',
         delete: 'Delete',
@@ -557,6 +558,17 @@ export const en = {
         file: 'File',
         fileEmpty: 'File is empty',
         noChanges: 'No changes to display',
+        loadingImage: 'Loading image...',
+        failedToLoadImage: 'Failed to load image',
+    },
+
+    browse: {
+        browseFiles: 'Browse Files',
+        browseFilesSubtitle: 'Navigate the project directory',
+        parentDirectory: 'Parent directory',
+        directory: 'Directory',
+        failedToLoadDirectory: 'Failed to load directory',
+        emptyDirectory: 'This directory is empty',
     },
 
     settingsVoice: {

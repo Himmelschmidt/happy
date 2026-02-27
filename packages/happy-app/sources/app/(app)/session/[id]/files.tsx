@@ -154,9 +154,23 @@ export default function FilesScreen() {
         return <FileIcon fileName={file.fileName} size={29} />;
     };
 
+    const handleBrowsePress = React.useCallback(() => {
+        router.push(`/session/${sessionId}/browse`);
+    }, [router, sessionId]);
+
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-            
+
+            {/* Browse Files */}
+            <Item
+                title={t('browse.browseFiles')}
+                subtitle={t('browse.browseFilesSubtitle')}
+                icon={<Octicons name="file-directory" size={29} color="#007AFF" />}
+                onPress={handleBrowsePress}
+                showChevron={true}
+                showDivider={true}
+            />
+
             {/* Search Input - Always Visible */}
             <View style={{
                 padding: 16,
