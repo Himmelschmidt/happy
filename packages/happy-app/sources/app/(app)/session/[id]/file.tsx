@@ -12,6 +12,8 @@ import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { layout } from '@/components/layout';
 import { t } from '@/text';
 import { FileIcon } from '@/components/FileIcon';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 interface FileContent {
     content: string;
@@ -42,6 +44,96 @@ function getImageMimeType(path: string): string {
         case 'tif': return 'image/tiff';
         default: return 'application/octet-stream';
     }
+}
+
+const MIN_SCALE = 1;
+const MAX_SCALE = 5;
+const DOUBLE_TAP_SCALE = 3;
+
+function ZoomableImage({ uri, width }: { uri: string; width: number }) {
+    const scale = useSharedValue(1);
+    const savedScale = useSharedValue(1);
+    const translateX = useSharedValue(0);
+    const translateY = useSharedValue(0);
+    const savedTranslateX = useSharedValue(0);
+    const savedTranslateY = useSharedValue(0);
+
+    const pinch = Gesture.Pinch()
+        .onUpdate((e) => {
+            const newScale = savedScale.value * e.scale;
+            scale.value = Math.min(Math.max(newScale, MIN_SCALE), MAX_SCALE);
+        })
+        .onEnd(() => {
+            savedScale.value = scale.value;
+            if (scale.value <= MIN_SCALE) {
+                scale.value = withTiming(MIN_SCALE);
+                translateX.value = withTiming(0);
+                translateY.value = withTiming(0);
+                savedScale.value = MIN_SCALE;
+                savedTranslateX.value = 0;
+                savedTranslateY.value = 0;
+            }
+        });
+
+    const pan = Gesture.Pan()
+        .onUpdate((e) => {
+            if (scale.value > MIN_SCALE) {
+                translateX.value = savedTranslateX.value + e.translationX;
+                translateY.value = savedTranslateY.value + e.translationY;
+            }
+        })
+        .onEnd(() => {
+            savedTranslateX.value = translateX.value;
+            savedTranslateY.value = translateY.value;
+        });
+
+    const doubleTap = Gesture.Tap()
+        .numberOfTaps(2)
+        .onEnd(() => {
+            if (scale.value > MIN_SCALE) {
+                scale.value = withTiming(MIN_SCALE);
+                translateX.value = withTiming(0);
+                translateY.value = withTiming(0);
+                savedScale.value = MIN_SCALE;
+                savedTranslateX.value = 0;
+                savedTranslateY.value = 0;
+            } else {
+                scale.value = withTiming(DOUBLE_TAP_SCALE);
+                savedScale.value = DOUBLE_TAP_SCALE;
+            }
+        });
+
+    const composed = Gesture.Simultaneous(pinch, pan, doubleTap);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: translateX.value },
+            { translateY: translateY.value },
+            { scale: scale.value },
+        ],
+    }));
+
+    return (
+        <GestureDetector gesture={composed}>
+            <Animated.View style={{
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+            }}>
+                <Animated.View style={animatedStyle}>
+                    <Image
+                        source={{ uri }}
+                        style={{
+                            width,
+                            height: width,
+                        }}
+                        contentFit="contain"
+                    />
+                </Animated.View>
+            </Animated.View>
+        </GestureDetector>
+    );
 }
 
 export default function FileScreen() {
@@ -307,7 +399,7 @@ export default function FileScreen() {
     }
 
     if (fileContent?.isBinary) {
-        // Image viewing
+        // Image viewing with pinch-to-zoom, pan, and double-tap
         if (fileContent.isImage && fileContent.content) {
             const mime = getImageMimeType(filePath);
             return (
@@ -332,26 +424,10 @@ export default function FileScreen() {
                             {filePath}
                         </Text>
                     </View>
-                    <ScrollView
-                        style={{ flex: 1 }}
-                        contentContainerStyle={{
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: 16,
-                            flexGrow: 1,
-                        }}
-                        maximumZoomScale={5}
-                        minimumZoomScale={1}
-                    >
-                        <Image
-                            source={{ uri: `data:${mime};base64,${fileContent.content}` }}
-                            style={{
-                                width: windowWidth - 32,
-                                height: windowWidth - 32,
-                            }}
-                            contentFit="contain"
-                        />
-                    </ScrollView>
+                    <ZoomableImage
+                        uri={`data:${mime};base64,${fileContent.content}`}
+                        width={windowWidth - 32}
+                    />
                 </View>
             );
         }
