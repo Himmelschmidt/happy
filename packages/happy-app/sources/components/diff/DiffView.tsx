@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, ViewStyle } from 'react-native';
 import { calculateUnifiedDiff, DiffToken } from '@/components/diff/calculateDiff';
+import { tokenizeCode, getColors as getSyntaxColors } from '@/components/SimpleSyntaxHighlighter';
 import { Typography } from '@/constants/Typography';
 import { useUnistyles } from 'react-native-unistyles';
 
@@ -18,6 +19,45 @@ interface DiffViewProps {
     maxHeight?: number;
     wrapLines?: boolean;
     fontScaleX?: number;
+    language?: string | null;
+}
+
+/** Map syntax token type to a theme color */
+function getSyntaxTokenColor(type: string, nestLevel: number | undefined, syntaxColors: ReturnType<typeof getSyntaxColors>): string {
+    switch (type) {
+        case 'keyword': return syntaxColors.keyword;
+        case 'controlFlow': return syntaxColors.controlFlow;
+        case 'type': return syntaxColors.type;
+        case 'modifier': return syntaxColors.modifier;
+        case 'string': return syntaxColors.string;
+        case 'number': return syntaxColors.number;
+        case 'boolean': return syntaxColors.boolean;
+        case 'regex': return syntaxColors.regex;
+        case 'function': return syntaxColors.function;
+        case 'method': return syntaxColors.method;
+        case 'property': return syntaxColors.property;
+        case 'comment': return syntaxColors.comment;
+        case 'docstring': return syntaxColors.docstring;
+        case 'operator': return syntaxColors.operator;
+        case 'assignment': return syntaxColors.assignment;
+        case 'comparison': return syntaxColors.comparison;
+        case 'logical': return syntaxColors.logical;
+        case 'decorator': return syntaxColors.decorator;
+        case 'import': return syntaxColors.import;
+        case 'variable': return syntaxColors.variable;
+        case 'parameter': return syntaxColors.parameter;
+        case 'punctuation': return syntaxColors.punctuation;
+        case 'bracket':
+            switch ((nestLevel || 1) % 5) {
+                case 1: return syntaxColors.bracket1;
+                case 2: return syntaxColors.bracket2;
+                case 3: return syntaxColors.bracket3;
+                case 4: return syntaxColors.bracket4;
+                case 0: return syntaxColors.bracket5;
+                default: return syntaxColors.bracket1;
+            }
+        default: return syntaxColors.default;
+    }
 }
 
 export const DiffView: React.FC<DiffViewProps> = ({
@@ -29,10 +69,12 @@ export const DiffView: React.FC<DiffViewProps> = ({
     wrapLines = false,
     style,
     fontScaleX = 1,
+    language,
 }) => {
     // Always use light theme colors
     const { theme } = useUnistyles();
     const colors = theme.colors.diff;
+    const syntaxColors = useMemo(() => language ? getSyntaxColors(theme) : null, [language, theme]);
 
     // Calculate diff with inline highlighting
     const { hunks } = useMemo(() => {
@@ -52,6 +94,43 @@ export const DiffView: React.FC<DiffViewProps> = ({
     const formatLineContent = (content: string) => {
         // Just trim trailing spaces, we'll handle leading spaces in rendering
         return content.trimEnd();
+    };
+
+    // Render line content with syntax highlighting (no inline diff tokens)
+    const renderSyntaxLineContent = (content: string) => {
+        const formatted = formatLineContent(content);
+        if (!syntaxColors || !language) return <Text>{formatted}</Text>;
+
+        const tokens = tokenizeCode(formatted, language);
+        let processedLeading = false;
+
+        return tokens.map((token, idx) => {
+            // Handle leading spaces as dots
+            if (!processedLeading && token.text && token.type === 'default') {
+                const leadingMatch = token.text.match(/^( +)/);
+                if (leadingMatch) {
+                    processedLeading = true;
+                    const dots = '\u00b7'.repeat(leadingMatch[0].length);
+                    const rest = token.text.slice(leadingMatch[0].length);
+                    return (
+                        <Text key={idx}>
+                            <Text style={{ color: colors.leadingSpaceDot }}>{dots}</Text>
+                            {rest ? <Text style={{ color: getSyntaxTokenColor(token.type, token.nestLevel, syntaxColors) }}>{rest}</Text> : null}
+                        </Text>
+                    );
+                }
+                processedLeading = true;
+            }
+            if (!processedLeading) {
+                processedLeading = true;
+            }
+
+            return (
+                <Text key={idx} style={{ color: getSyntaxTokenColor(token.type, token.nestLevel, syntaxColors) }}>
+                    {token.text}
+                </Text>
+            );
+        });
     };
 
     // Helper function to render line content with styled leading space dots and inline highlighting
@@ -111,6 +190,11 @@ export const DiffView: React.FC<DiffViewProps> = ({
             });
         }
 
+        // Use syntax highlighting if language is set
+        if (syntaxColors && language) {
+            return renderSyntaxLineContent(content);
+        }
+
         // Regular rendering without tokens
         const leadingSpaces = formatted.match(/^( +)/);
         const leadingDots = leadingSpaces ? '\u00b7'.repeat(leadingSpaces[0].length) : '';
@@ -127,13 +211,13 @@ export const DiffView: React.FC<DiffViewProps> = ({
     // Render diff content as separate lines to prevent wrapping
     const renderDiffContent = () => {
         const lines: React.ReactNode[] = [];
-        
+
         hunks.forEach((hunk, hunkIndex) => {
             // Add hunk header for non-first hunks
             if (hunkIndex > 0) {
                 lines.push(
-                    <Text 
-                        key={`hunk-header-${hunkIndex}`} 
+                    <Text
+                        key={`hunk-header-${hunkIndex}`}
                         numberOfLines={wrapLines ? undefined : 1}
                         style={{
                             ...Typography.mono(),
@@ -155,7 +239,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
                 const isRemoved = line.type === 'remove';
                 const textColor = isAdded ? colors.addedText : isRemoved ? colors.removedText : colors.contextText;
                 const bgColor = isAdded ? colors.addedBg : isRemoved ? colors.removedBg : colors.contextBg;
-                
+
                 // Render complete line in a single Text element
                 lines.push(
                     <Text
@@ -191,7 +275,7 @@ export const DiffView: React.FC<DiffViewProps> = ({
                 );
             });
         });
-        
+
         return lines;
     };
 
@@ -200,43 +284,4 @@ export const DiffView: React.FC<DiffViewProps> = ({
             {renderDiffContent()}
         </View>
     );
-
-    // return (
-    //     <View style={containerStyle}>
-    //         {/* Header */}
-    //         <View style={headerStyle}>
-    //             <Text style={titleStyle}>
-    //                 {`${oldTitle} → ${newTitle}`}
-    //             </Text>
-
-    //             {showDiffStats && (
-    //                 <View style={{ flexDirection: 'row', gap: 8 }}>
-    //                     <Text style={[statsStyle, { color: colors.success }]}>
-    //                         +{stats.additions}
-    //                     </Text>
-    //                     <Text style={[statsStyle, { color: colors.error }]}>
-    //                         -{stats.deletions}
-    //                     </Text>
-    //                 </View>
-    //             )}
-    //         </View>
-
-    //         {/* Diff content */}
-    //         <ScrollView
-    //             style={{ flex: 1 }}
-    //             nestedScrollEnabled
-    //             showsVerticalScrollIndicator={true}
-    //         >
-    //             <ScrollView
-    //                 ref={scrollRef}
-    //                 horizontal={!wrapLines}
-    //                 showsHorizontalScrollIndicator={!wrapLines}
-    //                 contentContainerStyle={{ flexGrow: 1 }}
-    //             >
-    //                 {content}
-    //             </ScrollView>
-    //         </ScrollView>
-    //     </View>
-    // );
 };
-

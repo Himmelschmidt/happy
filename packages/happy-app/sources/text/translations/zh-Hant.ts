@@ -58,6 +58,7 @@ export const zhHant: TranslationStructure = {
         message: '訊息',
         files: '檔案',
         fileViewer: '檔案檢視器',
+        gitStatus: 'Git Status',
         loading: '載入中...',
         retry: '重試',
         delete: '刪除',

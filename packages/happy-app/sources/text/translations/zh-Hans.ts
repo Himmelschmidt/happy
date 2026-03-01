@@ -58,6 +58,7 @@ export const zhHans: TranslationStructure = {
         message: '消息',
         files: '文件',
         fileViewer: '文件查看器',
+        gitStatus: 'Git Status',
         loading: '加载中...',
         retry: '重试',
         delete: '删除',

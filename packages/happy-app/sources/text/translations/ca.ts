@@ -56,6 +56,7 @@ export const ca: TranslationStructure = {
         message: 'Missatge',
         files: 'Fitxers',
         fileViewer: 'Visualitzador de fitxers',
+        gitStatus: 'Git Status',
         loading: 'Carregant...',
         retry: 'Torna-ho a provar',
         delete: 'Elimina',

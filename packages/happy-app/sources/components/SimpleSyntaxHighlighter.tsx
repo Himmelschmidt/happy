@@ -10,7 +10,7 @@ interface SimpleSyntaxHighlighterProps {
 }
 
 // Get theme-aware colors
-const getColors = (theme: any) => ({
+export const getColors = (theme: any) => ({
   // Use theme colors directly for syntax highlighting
   keyword: theme.colors.syntaxKeyword,
   controlFlow: theme.colors.syntaxKeyword,
@@ -61,7 +61,7 @@ const openBrackets = Object.keys(bracketPairs);
 const closeBrackets = Object.values(bracketPairs);
 
 // Enhanced tokenizer with comprehensive token types
-const tokenizeCode = (code: string, language: string | null) => {
+export const tokenizeCode = (code: string, language: string | null) => {
   const tokens: Array<{ text: string; type: string; nestLevel?: number }> = [];
   
   if (!language) {

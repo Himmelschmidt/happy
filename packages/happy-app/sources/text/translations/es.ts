@@ -56,6 +56,7 @@ export const es: TranslationStructure = {
         message: 'Mensaje',
         files: 'Archivos',
         fileViewer: 'Visor de archivos',
+        gitStatus: 'Git Status',
         loading: 'Cargando...',
         retry: 'Reintentar',
         delete: 'Eliminar',

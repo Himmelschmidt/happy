@@ -58,6 +58,7 @@ export const ja: TranslationStructure = {
         message: 'メッセージ',
         files: 'ファイル',
         fileViewer: 'ファイルビューアー',
+        gitStatus: 'Git Status',
         loading: '読み込み中...',
         retry: '再試行',
         delete: '削除',

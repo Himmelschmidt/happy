@@ -67,6 +67,7 @@ export const ru: TranslationStructure = {
         message: 'Сообщение',
         files: 'Файлы',
         fileViewer: 'Просмотр файла',
+        gitStatus: 'Git Status',
         loading: 'Загрузка...',
         retry: 'Повторить',
         delete: 'Удалить',

@@ -67,6 +67,7 @@ interface AgentInputProps {
     };
     alwaysShowContextSize?: boolean;
     onFileViewerPress?: () => void;
+    onGitPress?: () => void;
     agentType?: 'claude' | 'codex' | 'gemini';
     onAgentClick?: () => void;
     machineName?: string | null;
@@ -1140,8 +1141,11 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                     </Shaker>
                                 )}
 
-                                {/* Git Status Badge */}
+                                {/* File Explorer Button */}
                                 <GitStatusButton sessionId={props.sessionId} onPress={props.onFileViewerPress} />
+
+                                {/* Git Diff Button */}
+                                <GitDiffButton onPress={props.onGitPress} />
 
                                 {/* File upload button */}
                                 {props.sessionId && props.metadata?.path && (
@@ -1277,6 +1281,40 @@ function GitStatusButton({ onPress }: { sessionId?: string, onPress?: () => void
         >
             <Ionicons
                 name="folder-outline"
+                size={18}
+                color={theme.colors.button.secondary.tint}
+            />
+        </Pressable>
+    );
+}
+
+// Git Diff Button Component
+function GitDiffButton({ onPress }: { onPress?: () => void }) {
+    const { theme } = useUnistyles();
+
+    if (!onPress) {
+        return null;
+    }
+
+    return (
+        <Pressable
+            style={(p) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: Platform.select({ default: 16, android: 20 }),
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+                height: 32,
+                opacity: p.pressed ? 0.7 : 1,
+            })}
+            hitSlop={{ top: 5, bottom: 10, left: 0, right: 0 }}
+            onPress={() => {
+                hapticsLight();
+                onPress?.();
+            }}
+        >
+            <Ionicons
+                name="git-branch-outline"
                 size={18}
                 color={theme.colors.button.secondary.tint}
             />

@@ -56,6 +56,7 @@ export const en = {
         message: 'Message',
         files: 'Files',
         fileViewer: 'File Viewer',
+        gitStatus: 'Git Status',
         loading: 'Loading...',
         retry: 'Retry',
         delete: 'Delete',
