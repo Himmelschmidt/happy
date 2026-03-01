@@ -1,12 +1,12 @@
 import * as React from 'react';
-import { View, ScrollView, ActivityIndicator, Platform, Pressable } from 'react-native';
+import { View, ScrollView, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
+import { Image } from 'expo-image';
 import { Text } from '@/components/StyledText';
 import { SimpleSyntaxHighlighter } from '@/components/SimpleSyntaxHighlighter';
 import { Typography } from '@/constants/Typography';
-import { sessionReadFile, sessionBash } from '@/sync/ops';
-import { storage } from '@/sync/storage';
+import { sessionReadFile } from '@/sync/ops';
 import { Modal } from '@/modal';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { layout } from '@/components/layout';
@@ -17,56 +17,32 @@ interface FileContent {
     content: string;
     encoding: 'utf8' | 'base64';
     isBinary: boolean;
+    isImage?: boolean;
 }
 
-// Diff display component
-const DiffDisplay: React.FC<{ diffContent: string }> = ({ diffContent }) => {
-    const { theme } = useUnistyles();
-    const lines = diffContent.split('\n');
-    
-    return (
-        <View>
-            {lines.map((line, index) => {
-                const baseStyle = { ...Typography.mono(), fontSize: 14, lineHeight: 20 };
-                let lineStyle: any = baseStyle;
-                let backgroundColor = 'transparent';
-                
-                if (line.startsWith('+') && !line.startsWith('+++')) {
-                    lineStyle = { ...baseStyle, color: theme.colors.diff.addedText };
-                    backgroundColor = theme.colors.diff.addedBg;
-                } else if (line.startsWith('-') && !line.startsWith('---')) {
-                    lineStyle = { ...baseStyle, color: theme.colors.diff.removedText };
-                    backgroundColor = theme.colors.diff.removedBg;
-                } else if (line.startsWith('@@')) {
-                    lineStyle = { ...baseStyle, color: theme.colors.diff.hunkHeaderText, fontWeight: '600' };
-                    backgroundColor = theme.colors.diff.hunkHeaderBg;
-                } else if (line.startsWith('+++') || line.startsWith('---')) {
-                    lineStyle = { ...baseStyle, color: theme.colors.text, fontWeight: '600' };
-                } else {
-                    lineStyle = { ...baseStyle, color: theme.colors.diff.contextText };
-                }
-                
-                return (
-                    <View 
-                        key={index} 
-                        style={{ 
-                            backgroundColor, 
-                            paddingHorizontal: 8, 
-                            paddingVertical: 1,
-                            borderLeftWidth: line.startsWith('+') && !line.startsWith('+++') ? 3 : 
-                                           line.startsWith('-') && !line.startsWith('---') ? 3 : 0,
-                            borderLeftColor: line.startsWith('+') && !line.startsWith('+++') ? theme.colors.diff.addedBorder : theme.colors.diff.removedBorder
-                        }}
-                    >
-                        <Text style={lineStyle}>
-                            {line || ' '}
-                        </Text>
-                    </View>
-                );
-            })}
-        </View>
-    );
-};
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif'] as const;
+
+function isImageFile(path: string): boolean {
+    const ext = path.split('.').pop()?.toLowerCase();
+    return ext ? (IMAGE_EXTENSIONS as readonly string[]).includes(ext) : false;
+}
+
+function getImageMimeType(path: string): string {
+    const ext = path.split('.').pop()?.toLowerCase();
+    switch (ext) {
+        case 'png': return 'image/png';
+        case 'jpg':
+        case 'jpeg': return 'image/jpeg';
+        case 'gif': return 'image/gif';
+        case 'bmp': return 'image/bmp';
+        case 'webp': return 'image/webp';
+        case 'svg': return 'image/svg+xml';
+        case 'ico': return 'image/x-icon';
+        case 'tiff':
+        case 'tif': return 'image/tiff';
+        default: return 'application/octet-stream';
+    }
+}
 
 export default function FileScreen() {
     const route = useRoute();
@@ -75,18 +51,17 @@ export default function FileScreen() {
     const searchParams = useLocalSearchParams();
     const encodedPath = searchParams.path as string;
     let filePath = '';
-    
-    // Decode base64 path with error handling
+
+    // Decode URI-encoded path with error handling
     try {
-        filePath = encodedPath ? atob(encodedPath) : '';
+        filePath = encodedPath ? decodeURIComponent(encodedPath) : '';
     } catch (error) {
         console.error('Failed to decode file path:', error);
-        filePath = encodedPath || ''; // Fallback to original path if decoding fails
+        filePath = encodedPath || '';
     }
-    
+
+    const { width: windowWidth } = useWindowDimensions();
     const [fileContent, setFileContent] = React.useState<FileContent | null>(null);
-    const [diffContent, setDiffContent] = React.useState<string | null>(null);
-    const [displayMode, setDisplayMode] = React.useState<'file' | 'diff'>('diff');
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -166,84 +141,86 @@ export default function FileScreen() {
     // Load file content
     React.useEffect(() => {
         let isCancelled = false;
-        
+
         const loadFile = async () => {
             try {
                 setIsLoading(true);
                 setError(null);
-                
-                // Get session metadata for git commands
-                const session = storage.getState().sessions[sessionId!];
-                const sessionPath = session?.metadata?.path;
-                
-                // Check if file is likely binary before trying to read
+
+                console.error(`[file.tsx] loadFile: path=${filePath}, isBinary=${isBinaryFile(filePath)}, isImage=${isImageFile(filePath)}`);
+
+                // Binary files: show image or "binary file" message
                 if (isBinaryFile(filePath)) {
-                    if (!isCancelled) {
-                        setFileContent({
-                            content: '',
-                            encoding: 'base64',
-                            isBinary: true
-                        });
-                        setIsLoading(false);
+                    if (isImageFile(filePath)) {
+                        try {
+                            console.error(`[file.tsx] Requesting image readFile...`);
+                            const response = await sessionReadFile(sessionId, filePath);
+                            console.error(`[file.tsx] Image readFile response: success=${response.success}, contentLen=${response.content?.length ?? 0}, encoding=${(response as any).encoding}, error=${response.error}`);
+                            if (!isCancelled && response.success && response.content) {
+                                setFileContent({
+                                    content: response.content,
+                                    encoding: 'base64',
+                                    isBinary: true,
+                                    isImage: true,
+                                });
+                            } else if (!isCancelled) {
+                                console.error(`[file.tsx] Image readFile failed or empty`);
+                                setFileContent({ content: '', encoding: 'base64', isBinary: true, isImage: true });
+                            }
+                        } catch (imgError) {
+                            console.error(`[file.tsx] Image readFile exception:`, imgError);
+                            if (!isCancelled) {
+                                setFileContent({ content: '', encoding: 'base64', isBinary: true, isImage: true });
+                            }
+                        }
+                    } else if (!isCancelled) {
+                        setFileContent({ content: '', encoding: 'base64', isBinary: true });
                     }
+                    if (!isCancelled) setIsLoading(false);
                     return;
                 }
-                
-                // Fetch git diff for the file (if in git repo)
-                if (sessionPath && sessionId) {
-                    try {
-                        const diffResponse = await sessionBash(sessionId, {
-                            // If someone is using a custom diff tool like
-                            // difftastic, the parser would break. So instead
-                            // force git to use the built in diff tool.
-                            command: `git diff --no-ext-diff "${filePath}"`,
-                            cwd: sessionPath,
-                            timeout: 5000
-                        });
-                        
-                        if (!isCancelled && diffResponse.success && diffResponse.stdout.trim()) {
-                            setDiffContent(diffResponse.stdout);
-                        }
-                    } catch (diffError) {
-                        console.log('Could not fetch git diff:', diffError);
-                        // Continue with file loading even if diff fails
-                    }
-                }
-                
+
+                // Text files: read content directly
                 const response = await sessionReadFile(sessionId, filePath);
-                
-                if (!isCancelled) {
-                    if (response.success && response.content) {
-                        // Decode base64 content to UTF-8 string
-                        let decodedContent: string;
+
+                if (isCancelled) return;
+
+                if (response.success && response.content) {
+                    // CLI sends encoding: 'utf8' for text files (no base64 overhead)
+                    const serverEncoding = (response as any).encoding as string | undefined;
+
+                    let decodedContent: string;
+                    if (serverEncoding === 'utf8') {
+                        // Already plain text — no decoding needed
+                        decodedContent = response.content;
+                    } else {
+                        // Legacy base64 path
                         try {
                             decodedContent = atob(response.content);
                         } catch (decodeError) {
-                            // If base64 decode fails, treat as binary
-                            setFileContent({
-                                content: '',
-                                encoding: 'base64',
-                                isBinary: true
-                            });
+                            setFileContent({ content: '', encoding: 'base64', isBinary: true });
                             return;
                         }
-                        
-                        // Check if content contains binary data (null bytes or too many non-printable chars)
-                        const hasNullBytes = decodedContent.includes('\0');
-                        const nonPrintableCount = decodedContent.split('').filter(char => {
-                            const code = char.charCodeAt(0);
-                            return code < 32 && code !== 9 && code !== 10 && code !== 13; // Allow tab, LF, CR
-                        }).length;
-                        const isBinary = hasNullBytes || (nonPrintableCount / decodedContent.length > 0.1);
-                        
-                        setFileContent({
-                            content: isBinary ? '' : decodedContent,
-                            encoding: 'utf8',
-                            isBinary
-                        });
-                    } else {
-                        setError(response.error || 'Failed to read file');
+
+                        // Quick binary check: look for null bytes in the first 8KB
+                        const sampleLength = Math.min(decodedContent.length, 8192);
+                        let isBinary = false;
+                        for (let i = 0; i < sampleLength; i++) {
+                            if (decodedContent.charCodeAt(i) === 0) { isBinary = true; break; }
+                        }
+                        if (isBinary) {
+                            setFileContent({ content: '', encoding: 'base64', isBinary: true });
+                            return;
+                        }
                     }
+
+                    setFileContent({
+                        content: decodedContent,
+                        encoding: 'utf8',
+                        isBinary: false,
+                    });
+                } else {
+                    setError(response.error || 'Failed to read file');
                 }
             } catch (error) {
                 console.error('Failed to load file:', error);
@@ -258,7 +235,7 @@ export default function FileScreen() {
         };
 
         loadFile();
-        
+
         return () => {
             isCancelled = true;
         };
@@ -271,32 +248,27 @@ export default function FileScreen() {
         }
     }, [error]);
 
-    // Set default display mode based on diff availability
-    React.useEffect(() => {
-        if (diffContent) {
-            setDisplayMode('diff');
-        } else if (fileContent) {
-            setDisplayMode('file');
-        }
-    }, [diffContent, fileContent]);
-
     const fileName = filePath.split('/').pop() || filePath;
-    const language = getFileLanguage(filePath);
+    // Skip syntax highlighting for large files — tokenizing 10K+ chars creates thousands of
+    // Text components which freezes the UI
+    const MAX_HIGHLIGHT_SIZE = 10_000;
+    const contentLength = fileContent?.content?.length ?? 0;
+    const language = contentLength <= MAX_HIGHLIGHT_SIZE ? getFileLanguage(filePath) : null;
 
     if (isLoading) {
         return (
-            <View style={{ 
-                flex: 1, 
+            <View style={{
+                flex: 1,
                 backgroundColor: theme.colors.surface,
-                justifyContent: 'center', 
-                alignItems: 'center' 
+                justifyContent: 'center',
+                alignItems: 'center'
             }}>
                 <ActivityIndicator size="small" color={theme.colors.textSecondary} />
-                <Text style={{ 
-                    marginTop: 16, 
-                    fontSize: 16, 
+                <Text style={{
+                    marginTop: 16,
+                    fontSize: 16,
                     color: theme.colors.textSecondary,
-                    ...Typography.default() 
+                    ...Typography.default()
                 }}>
                     {t('files.loadingFile', { fileName })}
                 </Text>
@@ -306,15 +278,15 @@ export default function FileScreen() {
 
     if (error) {
         return (
-            <View style={{ 
-                flex: 1, 
+            <View style={{
+                flex: 1,
                 backgroundColor: theme.colors.surface,
-                justifyContent: 'center', 
+                justifyContent: 'center',
                 alignItems: 'center',
                 padding: 20
             }}>
-                <Text style={{ 
-                    fontSize: 18, 
+                <Text style={{
+                    fontSize: 18,
                     fontWeight: 'bold',
                     color: theme.colors.textDestructive,
                     marginBottom: 8,
@@ -322,11 +294,11 @@ export default function FileScreen() {
                 }}>
                     {t('common.error')}
                 </Text>
-                <Text style={{ 
-                    fontSize: 16, 
+                <Text style={{
+                    fontSize: 16,
                     color: theme.colors.textSecondary,
                     textAlign: 'center',
-                    ...Typography.default() 
+                    ...Typography.default()
                 }}>
                     {error}
                 </Text>
@@ -335,16 +307,66 @@ export default function FileScreen() {
     }
 
     if (fileContent?.isBinary) {
+        // Image viewing
+        if (fileContent.isImage && fileContent.content) {
+            const mime = getImageMimeType(filePath);
+            return (
+                <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+                    {/* File path header */}
+                    <View style={{
+                        padding: 16,
+                        borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
+                        borderBottomColor: theme.colors.divider,
+                        backgroundColor: theme.colors.surfaceHigh,
+                        flexDirection: 'row',
+                        alignItems: 'center'
+                    }}>
+                        <FileIcon fileName={fileName} size={20} />
+                        <Text style={{
+                            fontSize: 14,
+                            color: theme.colors.textSecondary,
+                            marginLeft: 8,
+                            flex: 1,
+                            ...Typography.mono()
+                        }}>
+                            {filePath}
+                        </Text>
+                    </View>
+                    <ScrollView
+                        style={{ flex: 1 }}
+                        contentContainerStyle={{
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 16,
+                            flexGrow: 1,
+                        }}
+                        maximumZoomScale={5}
+                        minimumZoomScale={1}
+                    >
+                        <Image
+                            source={{ uri: `data:${mime};base64,${fileContent.content}` }}
+                            style={{
+                                width: windowWidth - 32,
+                                height: windowWidth - 32,
+                            }}
+                            contentFit="contain"
+                        />
+                    </ScrollView>
+                </View>
+            );
+        }
+
+        // Non-image binary file
         return (
-            <View style={{ 
-                flex: 1, 
+            <View style={{
+                flex: 1,
                 backgroundColor: theme.colors.surface,
-                justifyContent: 'center', 
+                justifyContent: 'center',
                 alignItems: 'center',
                 padding: 20
             }}>
-                <Text style={{ 
-                    fontSize: 18, 
+                <Text style={{
+                    fontSize: 18,
                     fontWeight: 'bold',
                     color: theme.colors.textSecondary,
                     marginBottom: 8,
@@ -352,20 +374,20 @@ export default function FileScreen() {
                 }}>
                     {t('files.binaryFile')}
                 </Text>
-                <Text style={{ 
-                    fontSize: 16, 
+                <Text style={{
+                    fontSize: 16,
                     color: theme.colors.textSecondary,
                     textAlign: 'center',
-                    ...Typography.default() 
+                    ...Typography.default()
                 }}>
                     {t('files.cannotDisplayBinary')}
                 </Text>
-                <Text style={{ 
-                    fontSize: 14, 
+                <Text style={{
+                    fontSize: 14,
                     color: '#999',
                     textAlign: 'center',
                     marginTop: 8,
-                    ...Typography.default() 
+                    ...Typography.default()
                 }}>
                     {fileName}
                 </Text>
@@ -375,7 +397,7 @@ export default function FileScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-            
+
             {/* File path header */}
             <View style={{
                 padding: 16,
@@ -397,72 +419,19 @@ export default function FileScreen() {
                 </Text>
             </View>
 
-            {/* Toggle buttons for File/Diff view */}
-            {diffContent && (
-                <View style={{
-                    flexDirection: 'row',
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderBottomWidth: Platform.select({ ios: 0.33, default: 1 }),
-                    borderBottomColor: theme.colors.divider,
-                    backgroundColor: theme.colors.surface
-                }}>
-                    <Pressable
-                        onPress={() => setDisplayMode('diff')}
-                        style={{
-                            paddingHorizontal: 16,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            backgroundColor: displayMode === 'diff' ? theme.colors.textLink : theme.colors.input.background,
-                            marginRight: 8
-                        }}
-                    >
-                        <Text style={{
-                            fontSize: 14,
-                            fontWeight: '600',
-                            color: displayMode === 'diff' ? 'white' : theme.colors.textSecondary,
-                            ...Typography.default()
-                        }}>
-                            {t('files.diff')}
-                        </Text>
-                    </Pressable>
-                    
-                    <Pressable
-                        onPress={() => setDisplayMode('file')}
-                        style={{
-                            paddingHorizontal: 16,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            backgroundColor: displayMode === 'file' ? theme.colors.textLink : theme.colors.input.background
-                        }}
-                    >
-                        <Text style={{
-                            fontSize: 14,
-                            fontWeight: '600',
-                            color: displayMode === 'file' ? 'white' : theme.colors.textSecondary,
-                            ...Typography.default()
-                        }}>
-                            {t('files.file')}
-                        </Text>
-                    </Pressable>
-                </View>
-            )}
-            
             {/* Content display */}
-            <ScrollView 
+            <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{ padding: 16 }}
                 showsVerticalScrollIndicator={true}
             >
-                {displayMode === 'diff' && diffContent ? (
-                    <DiffDisplay diffContent={diffContent} />
-                ) : displayMode === 'file' && fileContent?.content ? (
-                    <SimpleSyntaxHighlighter 
+                {fileContent?.content ? (
+                    <SimpleSyntaxHighlighter
                         code={fileContent.content}
                         language={language}
                         selectable={true}
                     />
-                ) : displayMode === 'file' && fileContent && !fileContent.content ? (
+                ) : (
                     <Text style={{
                         fontSize: 16,
                         color: theme.colors.textSecondary,
@@ -471,16 +440,7 @@ export default function FileScreen() {
                     }}>
                         {t('files.fileEmpty')}
                     </Text>
-                ) : !diffContent && !fileContent?.content ? (
-                    <Text style={{
-                        fontSize: 16,
-                        color: theme.colors.textSecondary,
-                        fontStyle: 'italic',
-                        ...Typography.default()
-                    }}>
-                        {t('files.noChanges')}
-                    </Text>
-                ) : null}
+                )}
             </ScrollView>
         </View>
     );

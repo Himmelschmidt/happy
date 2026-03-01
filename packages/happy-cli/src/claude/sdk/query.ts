@@ -340,7 +340,10 @@ export function query(config: {
 
     // Spawn Claude Code process
     // Use clean env for global claude to avoid local node_modules/.bin taking precedence
-    const spawnEnv = isCommandOnly ? getCleanEnv() : process.env
+    // Always strip CLAUDECODE to prevent "cannot be launched inside another Claude Code session" errors
+    const baseEnv = isCommandOnly ? getCleanEnv() : { ...process.env }
+    delete baseEnv.CLAUDECODE
+    const spawnEnv = baseEnv
     logDebug(`Spawning Claude Code process: ${spawnCommand} ${spawnArgs.join(' ')} (using ${isCommandOnly ? 'clean' : 'normal'} env)`)
 
     const child = spawn(spawnCommand, spawnArgs, {
@@ -361,12 +364,10 @@ export function query(config: {
         childStdin = child.stdin
     }
 
-    // Handle stderr in debug mode
-    if (process.env.DEBUG) {
-        child.stderr.on('data', (data) => {
-            console.error('Claude Code stderr:', data.toString())
-        })
-    }
+    // Always capture stderr to log for diagnosing process crashes
+    child.stderr.on('data', (data) => {
+        logger.debug(`[Claude SDK stderr] ${data.toString().trim()}`)
+    })
 
     // Setup cleanup
     const cleanup = () => {

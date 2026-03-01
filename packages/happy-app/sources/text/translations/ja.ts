@@ -585,6 +585,10 @@ export const ja: TranslationStructure = {
         file: 'ファイル',
         fileEmpty: 'ファイルは空です',
         noChanges: '表示する変更はありません',
+        parentDirectory: '親ディレクトリ',
+        emptyDirectory: 'このディレクトリは空です',
+        directoryError: 'ディレクトリを読み込めませんでした',
+        items: ({ count }: { count: number }) => `${count} 件`,
     },
 
     settingsVoice: {

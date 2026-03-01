@@ -555,6 +555,10 @@ export const zhHans: TranslationStructure = {
         file: '文件',
         fileEmpty: '文件为空',
         noChanges: '没有要显示的更改',
+        parentDirectory: '上级目录',
+        emptyDirectory: '此目录为空',
+        directoryError: '无法加载目录',
+        items: ({ count }: { count: number }) => `${count} 个项目`,
     },
 
     settingsVoice: {

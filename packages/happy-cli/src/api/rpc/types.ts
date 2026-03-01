@@ -21,7 +21,8 @@ export type RpcHandlerMap = Map<string, RpcHandler>;
  */
 export interface RpcRequest {
     method: string;
-    params: string; // Base64 encoded encrypted params
+    params: string; // Base64 encoded encrypted params, or JSON string when plaintext
+    plaintext?: boolean; // When true, params/result are plain JSON (no encryption)
 }
 
 /**

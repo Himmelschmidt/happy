@@ -582,6 +582,10 @@ export const it: TranslationStructure = {
         file: 'File',
         fileEmpty: 'File vuoto',
         noChanges: 'Nessuna modifica da mostrare',
+        parentDirectory: 'Directory padre',
+        emptyDirectory: 'Questa directory è vuota',
+        directoryError: 'Impossibile caricare la directory',
+        items: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'elemento', plural: 'elementi' })}`,
     },
 
     settingsVoice: {

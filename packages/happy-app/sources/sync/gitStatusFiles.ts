@@ -38,25 +38,24 @@ export async function getGitStatusFiles(sessionId: string): Promise<GitStatusFil
             return null;
         }
 
-        // Get git status in porcelain v2 format (includes branch info and repo check)
-        // --untracked-files=all ensures we get individual files, not directories
-        const statusResult = await sessionBash(sessionId, {
-            command: 'git status --porcelain=v2 --branch --untracked-files=all',
-            cwd: session.metadata.path,
-            timeout: 10000
-        });
+        // Run git status and diff in parallel
+        const [statusResult, diffStatResult] = await Promise.all([
+            sessionBash(sessionId, {
+                command: 'git status --porcelain=v2 --branch --untracked-files=all',
+                cwd: session.metadata.path,
+                timeout: 10000
+            }),
+            sessionBash(sessionId, {
+                command: 'git diff --numstat HEAD && echo "---STAGED---" && git diff --cached --numstat',
+                cwd: session.metadata.path,
+                timeout: 10000
+            })
+        ]);
 
         if (!statusResult.success || statusResult.exitCode !== 0) {
             // Not a git repo or git command failed
             return null;
         }
-
-        // Get combined diff statistics for both staged and unstaged changes
-        const diffStatResult = await sessionBash(sessionId, {
-            command: 'git diff --numstat HEAD && echo "---STAGED---" && git diff --cached --numstat',
-            cwd: session.metadata.path,
-            timeout: 10000
-        });
 
         // Parse the results using v2 parser
         const statusOutput = statusResult.stdout;

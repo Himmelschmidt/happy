@@ -554,6 +554,10 @@ export const zhHant: TranslationStructure = {
         file: '檔案',
         fileEmpty: '檔案為空',
         noChanges: '沒有要顯示的更改',
+        parentDirectory: '上層目錄',
+        emptyDirectory: '此目錄為空',
+        directoryError: '無法載入目錄',
+        items: ({ count }: { count: number }) => `${count} 個項目`,
     },
 
     settingsVoice: {

@@ -66,7 +66,8 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
     // RPC call - Call an RPC method on another socket of the same user
     socket.on('rpc-call', async (data: any, callback: (response: any) => void) => {
         try {
-            const { method, params } = data;
+            const { method, params, plaintext } = data;
+            log({ module: 'websocket-rpc' }, `RPC call received: method=${method}, plaintext=${plaintext}, paramsLen=${typeof params === 'string' ? params.length : 'N/A'}`);
 
             if (!method || typeof method !== 'string') {
                 if (callback) {
@@ -110,11 +111,13 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
             try {
                 const response = await targetSocket.timeout(30000).emitWithAck('rpc-request', {
                     method,
-                    params
+                    params,
+                    ...(plaintext ? { plaintext: true } : {}),
                 });
 
                 const duration = Date.now() - startTime;
-                // log({ module: 'websocket-rpc' }, `RPC call succeeded: ${method} (${duration}ms)`);
+                const responseLen = typeof response === 'string' ? response.length : JSON.stringify(response).length;
+                log({ module: 'websocket-rpc' }, `RPC call succeeded: ${method} (${duration}ms, ${responseLen} bytes)`);
 
                 // Forward the response back to the caller via callback
                 if (callback) {

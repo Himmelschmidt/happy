@@ -15,7 +15,6 @@ import { AgentInputAutocomplete } from './AgentInputAutocomplete';
 import { FloatingOverlay } from './FloatingOverlay';
 import { TextInputState, MultiTextInputHandle } from './MultiTextInput';
 import { applySuggestion } from './autocomplete/applySuggestion';
-import { GitStatusBadge, useHasMeaningfulGitStatus } from './GitStatusBadge';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSetting } from '@/sync/storage';
 import { hackMode, hackModes } from '@/sync/modeHacks';
@@ -1172,12 +1171,10 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
 }));
 
 // Git Status Button Component
-function GitStatusButton({ sessionId, onPress }: { sessionId?: string, onPress?: () => void }) {
-    const hasMeaningfulGitStatus = useHasMeaningfulGitStatus(sessionId || '');
-    const styles = stylesheet;
+function GitStatusButton({ onPress }: { sessionId?: string, onPress?: () => void }) {
     const { theme } = useUnistyles();
 
-    if (!sessionId || !onPress) {
+    if (!onPress) {
         return null;
     }
 
@@ -1191,8 +1188,6 @@ function GitStatusButton({ sessionId, onPress }: { sessionId?: string, onPress?:
                 paddingVertical: 6,
                 height: 32,
                 opacity: p.pressed ? 0.7 : 1,
-                flex: 1,
-                overflow: 'hidden',
             })}
             hitSlop={{ top: 5, bottom: 10, left: 0, right: 0 }}
             onPress={() => {
@@ -1200,15 +1195,11 @@ function GitStatusButton({ sessionId, onPress }: { sessionId?: string, onPress?:
                 onPress?.();
             }}
         >
-            {hasMeaningfulGitStatus ? (
-                <GitStatusBadge sessionId={sessionId} />
-            ) : (
-                <Octicons
-                    name="git-branch"
-                    size={16}
-                    color={theme.colors.button.secondary.tint}
-                />
-            )}
+            <Ionicons
+                name="folder-outline"
+                size={18}
+                color={theme.colors.button.secondary.tint}
+            />
         </Pressable>
     );
 }

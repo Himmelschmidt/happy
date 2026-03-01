@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { ItemGroup } from '@/components/ItemGroup';
@@ -11,6 +11,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { layout } from '@/components/layout';
 import { t } from '@/text';
 import { MultiTextInput, MultiTextInputHandle } from '@/components/MultiTextInput';
+import { machineBash } from '@/sync/ops';
 
 const stylesheet = StyleSheet.create((theme) => ({
     container: {
@@ -58,6 +59,16 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
 }));
 
+/**
+ * Parse `ls -1pa` output into a list of directory names (excluding . and ..)
+ */
+function parseDirectories(stdout: string): string[] {
+    return stdout
+        .split('\n')
+        .filter(line => line.endsWith('/') && line !== './' && line !== '../')
+        .map(line => line.slice(0, -1)); // strip trailing /
+}
+
 export default function PathPickerScreen() {
     const { theme } = useUnistyles();
     const styles = stylesheet;
@@ -71,10 +82,66 @@ export default function PathPickerScreen() {
 
     const [customPath, setCustomPath] = useState(params.selectedPath || '');
 
+    // Directory browser state
+    const [browserPath, setBrowserPath] = useState('');
+    const [directories, setDirectories] = useState<string[]>([]);
+    const [isBrowsing, setIsBrowsing] = useState(false);
+    const [browseError, setBrowseError] = useState<string | null>(null);
+
     // Get the selected machine
     const machine = useMemo(() => {
         return machines.find(m => m.id === params.machineId);
     }, [machines, params.machineId]);
+
+    // Initialize browser path from machine home dir
+    useEffect(() => {
+        if (machine && !browserPath) {
+            setBrowserPath(machine.metadata?.homeDir || '/home');
+        }
+    }, [machine, browserPath]);
+
+    // Load directories when browserPath changes
+    const loadDirectories = useCallback(async (path: string) => {
+        if (!params.machineId) return;
+
+        setIsBrowsing(true);
+        setBrowseError(null);
+
+        const result = await machineBash(params.machineId, `ls -1pa "${path}"`, '/');
+        if (result.success) {
+            setDirectories(parseDirectories(result.stdout));
+        } else {
+            setBrowseError(result.stderr || 'Failed to list directory');
+            setDirectories([]);
+        }
+        setIsBrowsing(false);
+    }, [params.machineId]);
+
+    useEffect(() => {
+        if (browserPath) {
+            loadDirectories(browserPath);
+        }
+    }, [browserPath, loadDirectories]);
+
+    // Sync customPath to browserPath when user types or selects from recents
+    const handleCustomPathChange = useCallback((text: string) => {
+        setCustomPath(text);
+    }, []);
+
+    const navigateBrowser = useCallback((dirName: string) => {
+        const newPath = browserPath.endsWith('/')
+            ? `${browserPath}${dirName}`
+            : `${browserPath}/${dirName}`;
+        setBrowserPath(newPath);
+        setCustomPath(newPath);
+    }, [browserPath]);
+
+    const browserGoUp = useCallback(() => {
+        if (browserPath === '/') return;
+        const parentPath = browserPath.replace(/\/[^/]+\/?$/, '') || '/';
+        setBrowserPath(parentPath);
+        setCustomPath(parentPath);
+    }, [browserPath]);
 
     // Get recent paths for this machine - prioritize from settings, then fall back to sessions
     const recentPaths = useMemo(() => {
@@ -211,17 +278,88 @@ export default function PathPickerScreen() {
                                     <MultiTextInput
                                         ref={inputRef}
                                         value={customPath}
-                                        onChangeText={setCustomPath}
+                                        onChangeText={handleCustomPathChange}
                                         placeholder="Enter path (e.g. /home/user/projects)"
                                         maxHeight={76}
                                         paddingTop={8}
                                         paddingBottom={8}
-                                        // onSubmitEditing={handleSelectPath}
-                                        // blurOnSubmit={true}
-                                        // returnKeyType="done"
                                     />
                                 </View>
                             </View>
+                        </ItemGroup>
+
+                        {/* Directory Browser */}
+                        <ItemGroup title={`Browse: ${browserPath}`}>
+                            {isBrowsing ? (
+                                <View style={{ padding: 20, alignItems: 'center' }}>
+                                    <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                                </View>
+                            ) : browseError ? (
+                                <View style={{ padding: 16 }}>
+                                    <Text style={{
+                                        fontSize: 14,
+                                        color: theme.colors.textSecondary,
+                                        textAlign: 'center',
+                                        ...Typography.default()
+                                    }}>
+                                        {browseError}
+                                    </Text>
+                                </View>
+                            ) : (
+                                <>
+                                    {browserPath !== '/' && (
+                                        <Item
+                                            title=".."
+                                            leftElement={
+                                                <Ionicons
+                                                    name="folder-outline"
+                                                    size={18}
+                                                    color={theme.colors.textSecondary}
+                                                />
+                                            }
+                                            onPress={browserGoUp}
+                                            showChevron={false}
+                                            showDivider={directories.length > 0}
+                                        />
+                                    )}
+                                    {directories.map((dir, index) => {
+                                        const fullDirPath = browserPath.endsWith('/')
+                                            ? `${browserPath}${dir}`
+                                            : `${browserPath}/${dir}`;
+                                        const isSelected = customPath.trim() === fullDirPath;
+
+                                        return (
+                                            <Item
+                                                key={dir}
+                                                title={dir}
+                                                leftElement={
+                                                    <Ionicons
+                                                        name="folder-outline"
+                                                        size={18}
+                                                        color="#007AFF"
+                                                    />
+                                                }
+                                                onPress={() => navigateBrowser(dir)}
+                                                showChevron={false}
+                                                pressableStyle={isSelected ? { backgroundColor: theme.colors.surfaceSelected } : undefined}
+                                                showDivider={index < directories.length - 1}
+                                            />
+                                        );
+                                    })}
+                                    {directories.length === 0 && browserPath === '/' ? null : directories.length === 0 && (
+                                        <View style={{ padding: 16 }}>
+                                            <Text style={{
+                                                fontSize: 14,
+                                                color: theme.colors.textSecondary,
+                                                textAlign: 'center',
+                                                ...Typography.default()
+                                            }}>
+                                                No subdirectories
+                                            </Text>
+                                        </View>
+                                    )}
+                                </>
+                            )}
                         </ItemGroup>
 
                         {recentPaths.length > 0 && (
@@ -243,7 +381,7 @@ export default function PathPickerScreen() {
                                             }
                                             onPress={() => {
                                                 setCustomPath(path);
-                                                setTimeout(() => inputRef.current?.focus(), 50);
+                                                setBrowserPath(path);
                                             }}
                                             selected={isSelected}
                                             showChevron={false}
@@ -281,7 +419,7 @@ export default function PathPickerScreen() {
                                                 }
                                                 onPress={() => {
                                                     setCustomPath(path);
-                                                    setTimeout(() => inputRef.current?.focus(), 50);
+                                                    setBrowserPath(path);
                                                 }}
                                                 selected={isSelected}
                                                 showChevron={false}

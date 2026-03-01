@@ -30,17 +30,24 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
     const router = useRouter();
     const { theme } = useUnistyles();
 
+    // Extract file_path from tool input if present (for Read, Write, Edit, etc.)
+    const toolFilePath: string | null = typeof tool.input?.file_path === 'string' ? tool.input.file_path : null;
+
     // Create default onPress handler for navigation
     const handlePress = React.useCallback(() => {
         if (onPress) {
             onPress();
+        } else if (toolFilePath && sessionId) {
+            // Navigate directly to file viewer for tools with file_path
+            const encodedPath = encodeURIComponent(toolFilePath);
+            router.push(`/session/${sessionId}/file?path=${encodedPath}`);
         } else if (sessionId && messageId) {
             router.push(`/session/${sessionId}/message/${messageId}`);
         }
-    }, [onPress, sessionId, messageId, router]);
+    }, [onPress, sessionId, messageId, toolFilePath, router]);
 
-    // Enable pressable if either onPress is provided or we have navigation params
-    const isPressable = !!(onPress || (sessionId && messageId));
+    // Enable pressable if either onPress is provided, we have file_path, or we have navigation params
+    const isPressable = !!(onPress || (toolFilePath && sessionId) || (sessionId && messageId));
 
     let knownTool = knownTools[tool.name as keyof typeof knownTools] as any;
 

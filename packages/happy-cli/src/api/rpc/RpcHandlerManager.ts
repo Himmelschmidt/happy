@@ -60,20 +60,34 @@ export class RpcHandlerManager {
 
             if (!handler) {
                 this.logger('[RPC] [ERROR] Method not found', { method: request.method });
-                const errorResponse = { error: 'Method not found' };
-                const encryptedError = encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, errorResponse));
-                return encryptedError;
+                if (request.plaintext) {
+                    return JSON.stringify({ error: 'Method not found' });
+                }
+                return encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, { error: 'Method not found' }));
             }
 
-            // Decrypt the incoming params
+            // Plaintext mode: skip all encryption/decryption
+            if (request.plaintext) {
+                const params = JSON.parse(request.params);
+                this.logger('[RPC] Calling handler (plaintext)', { method: request.method });
+                const start = Date.now();
+                const result = await handler(params);
+                const response = JSON.stringify(result);
+                this.logger('[RPC] Handler completed (plaintext)', {
+                    method: request.method,
+                    elapsed: `${Date.now() - start}ms`,
+                    responseLength: response.length
+                });
+                return response;
+            }
+
+            // Encrypted mode (default)
             const decryptedParams = decrypt(this.encryptionKey, this.encryptionVariant, decodeBase64(request.params));
 
-            // Call the handler
             this.logger('[RPC] Calling handler', { method: request.method });
             const result = await handler(decryptedParams);
             this.logger('[RPC] Handler returned', { method: request.method, hasResult: result !== undefined });
 
-            // Encrypt and return the response
             const encryptedResponse = encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, result));
             this.logger('[RPC] Sending encrypted response', { method: request.method, responseLength: encryptedResponse.length });
             return encryptedResponse;
@@ -82,6 +96,9 @@ export class RpcHandlerManager {
             const errorResponse = {
                 error: error instanceof Error ? error.message : 'Unknown error'
             };
+            if (request.plaintext) {
+                return JSON.stringify(errorResponse);
+            }
             return encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, errorResponse));
         }
     }

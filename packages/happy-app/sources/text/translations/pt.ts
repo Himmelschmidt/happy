@@ -553,6 +553,10 @@ export const pt: TranslationStructure = {
         file: 'Arquivo',
         fileEmpty: 'Arquivo está vazio',
         noChanges: 'Nenhuma alteração para exibir',
+        parentDirectory: 'Diretório pai',
+        emptyDirectory: 'Este diretório está vazio',
+        directoryError: 'Não foi possível carregar o diretório',
+        items: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'item', plural: 'itens' })}`,
     },
 
     settingsVoice: {

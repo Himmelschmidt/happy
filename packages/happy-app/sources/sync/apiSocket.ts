@@ -116,14 +116,31 @@ class ApiSocket {
         if (!sessionEncryption) {
             throw new Error(`Session encryption not found for ${sessionId}`);
         }
-        
+
         const result = await this.socket!.emitWithAck('rpc-call', {
             method: `${sessionId}:${method}`,
             params: await sessionEncryption.encryptRaw(params)
         });
-        
+
         if (result.ok) {
             return await sessionEncryption.decryptRaw(result.result) as R;
+        }
+        throw new Error('RPC call failed');
+    }
+
+    /**
+     * Plaintext RPC call — skips encryption/decryption for maximum performance.
+     * Use only when the transport is trusted (e.g. local server over Tailscale).
+     */
+    async sessionRPCPlaintext<R, A>(sessionId: string, method: string, params: A): Promise<R> {
+        const result = await this.socket!.emitWithAck('rpc-call', {
+            method: `${sessionId}:${method}`,
+            params: JSON.stringify(params),
+            plaintext: true,
+        });
+
+        if (result.ok) {
+            return JSON.parse(result.result) as R;
         }
         throw new Error('RPC call failed');
     }

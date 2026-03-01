@@ -568,6 +568,10 @@ export const en: TranslationStructure = {
         file: 'File',
         fileEmpty: 'File is empty',
         noChanges: 'No changes to display',
+        parentDirectory: 'Parent directory',
+        emptyDirectory: 'This directory is empty',
+        directoryError: 'Could not load directory',
+        items: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'item', plural: 'items' })}`,
     },
 
     settingsVoice: {

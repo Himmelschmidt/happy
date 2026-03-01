@@ -46,7 +46,8 @@ interface SessionReadFileRequest {
 
 interface SessionReadFileResponse {
     success: boolean;
-    content?: string; // base64 encoded
+    content?: string;
+    encoding?: 'base64' | 'utf8';
     error?: string;
 }
 
@@ -68,7 +69,7 @@ interface SessionListDirectoryRequest {
     path: string;
 }
 
-interface DirectoryEntry {
+export interface DirectoryEntry {
     name: string;
     type: 'file' | 'directory' | 'other';
     size?: number;
@@ -342,7 +343,7 @@ export async function sessionSwitch(sessionId: string, to: 'remote' | 'local'): 
  */
 export async function sessionBash(sessionId: string, request: SessionBashRequest): Promise<SessionBashResponse> {
     try {
-        const response = await apiSocket.sessionRPC<SessionBashResponse, SessionBashRequest>(
+        const response = await apiSocket.sessionRPCPlaintext<SessionBashResponse, SessionBashRequest>(
             sessionId,
             'bash',
             request
@@ -365,7 +366,7 @@ export async function sessionBash(sessionId: string, request: SessionBashRequest
 export async function sessionReadFile(sessionId: string, path: string): Promise<SessionReadFileResponse> {
     try {
         const request: SessionReadFileRequest = { path };
-        const response = await apiSocket.sessionRPC<SessionReadFileResponse, SessionReadFileRequest>(
+        const response = await apiSocket.sessionRPCPlaintext<SessionReadFileResponse, SessionReadFileRequest>(
             sessionId,
             'readFile',
             request
@@ -410,7 +411,7 @@ export async function sessionWriteFile(
 export async function sessionListDirectory(sessionId: string, path: string): Promise<SessionListDirectoryResponse> {
     try {
         const request: SessionListDirectoryRequest = { path };
-        const response = await apiSocket.sessionRPC<SessionListDirectoryResponse, SessionListDirectoryRequest>(
+        const response = await apiSocket.sessionRPCPlaintext<SessionListDirectoryResponse, SessionListDirectoryRequest>(
             sessionId,
             'listDirectory',
             request
@@ -527,7 +528,6 @@ export type {
     SessionReadFileResponse,
     SessionWriteFileResponse,
     SessionListDirectoryResponse,
-    DirectoryEntry,
     SessionGetDirectoryTreeResponse,
     TreeNode,
     SessionRipgrepResponse,

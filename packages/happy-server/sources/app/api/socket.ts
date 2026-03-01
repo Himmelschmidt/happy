@@ -21,6 +21,7 @@ export function startSocket(app: Fastify) {
             credentials: true,
             allowedHeaders: ["*"]
         },
+        maxHttpBufferSize: 50e6, // 50MB — needed for image/file transfer via RPC
         transports: ['websocket', 'polling'],
         pingTimeout: 45000,
         pingInterval: 15000,

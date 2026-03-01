@@ -563,6 +563,10 @@ export const pl: TranslationStructure = {
         file: 'Plik',
         fileEmpty: 'Plik jest pusty',
         noChanges: 'Brak zmian do wyświetlenia',
+        parentDirectory: 'Katalog nadrzędny',
+        emptyDirectory: 'Ten katalog jest pusty',
+        directoryError: 'Nie udało się załadować katalogu',
+        items: ({ count }: { count: number }) => `${count} ${plural({ count, one: 'element', few: 'elementy', many: 'elementów' })}`,
     },
 
     settingsVoice: {

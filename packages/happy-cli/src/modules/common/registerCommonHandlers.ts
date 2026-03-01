@@ -31,7 +31,8 @@ interface ReadFileRequest {
 
 interface ReadFileResponse {
     success: boolean;
-    content?: string; // base64 encoded
+    content?: string;
+    encoding?: 'base64' | 'utf8';
     error?: string;
 }
 
@@ -232,19 +233,19 @@ export function registerCommonHandlers(rpcHandlerManager: RpcHandlerManager, wor
     });
 
     // Read file handler - returns base64 encoded content
+    // No path restriction — allows reading files anywhere (used by phone file browser)
     rpcHandlerManager.registerHandler<ReadFileRequest, ReadFileResponse>('readFile', async (data) => {
         logger.debug('Read file request:', data.path);
 
-        // Validate path is within working directory
-        const validation = validatePath(data.path, workingDirectory);
-        if (!validation.valid) {
-            return { success: false, error: validation.error };
-        }
-
         try {
             const buffer = await readFile(data.path);
-            const content = buffer.toString('base64');
-            return { success: true, content };
+            // Try to decode as UTF-8 text first — avoids 33% base64 bloat for text files
+            const text = buffer.toString('utf8');
+            const hasNullBytes = text.indexOf('\0') !== -1;
+            if (!hasNullBytes) {
+                return { success: true, content: text, encoding: 'utf8' };
+            }
+            return { success: true, content: buffer.toString('base64'), encoding: 'base64' };
         } catch (error) {
             logger.debug('Failed to read file:', error);
             return { success: false, error: error instanceof Error ? error.message : 'Failed to read file' };
@@ -317,49 +318,23 @@ export function registerCommonHandlers(rpcHandlerManager: RpcHandlerManager, wor
         }
     });
 
-    // List directory handler
+    // List directory handler — fast: no stat() calls, just readdir with file types
+    // No path restriction — allows browsing anywhere (used by phone file browser)
     rpcHandlerManager.registerHandler<ListDirectoryRequest, ListDirectoryResponse>('listDirectory', async (data) => {
         logger.debug('List directory request:', data.path);
-
-        // Validate path is within working directory
-        const validation = validatePath(data.path, workingDirectory);
-        if (!validation.valid) {
-            return { success: false, error: validation.error };
-        }
 
         try {
             const entries = await readdir(data.path, { withFileTypes: true });
 
-            const directoryEntries: DirectoryEntry[] = await Promise.all(
-                entries.map(async (entry) => {
-                    const fullPath = join(data.path, entry.name);
-                    let type: 'file' | 'directory' | 'other' = 'other';
-                    let size: number | undefined;
-                    let modified: number | undefined;
-
-                    if (entry.isDirectory()) {
-                        type = 'directory';
-                    } else if (entry.isFile()) {
-                        type = 'file';
-                    }
-
-                    try {
-                        const stats = await stat(fullPath);
-                        size = stats.size;
-                        modified = stats.mtime.getTime();
-                    } catch (error) {
-                        // Ignore stat errors for individual files
-                        logger.debug(`Failed to stat ${fullPath}:`, error);
-                    }
-
-                    return {
-                        name: entry.name,
-                        type,
-                        size,
-                        modified
-                    };
-                })
-            );
+            const directoryEntries: DirectoryEntry[] = entries.map((entry) => {
+                let type: 'file' | 'directory' | 'other' = 'other';
+                if (entry.isDirectory()) {
+                    type = 'directory';
+                } else if (entry.isFile()) {
+                    type = 'file';
+                }
+                return { name: entry.name, type };
+            });
 
             // Sort entries: directories first, then files, alphabetically
             directoryEntries.sort((a, b) => {

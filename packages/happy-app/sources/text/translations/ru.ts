@@ -563,6 +563,10 @@ export const ru: TranslationStructure = {
         file: 'Файл',
         fileEmpty: 'Файл пустой',
         noChanges: 'Нет изменений для отображения',
+        parentDirectory: 'Родительский каталог',
+        emptyDirectory: 'Этот каталог пуст',
+        directoryError: 'Не удалось загрузить каталог',
+        items: ({ count }: { count: number }) => `${count} ${plural({ count, one: 'элемент', few: 'элемента', many: 'элементов' })}`,
     },
 
     settingsVoice: {

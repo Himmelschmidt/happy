@@ -553,6 +553,10 @@ export const ca: TranslationStructure = {
         file: 'Fitxer',
         fileEmpty: 'El fitxer està buit',
         noChanges: 'No hi ha canvis a mostrar',
+        parentDirectory: 'Directori pare',
+        emptyDirectory: 'Aquest directori és buit',
+        directoryError: 'No s\'ha pogut carregar el directori',
+        items: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'element', plural: 'elements' })}`,
     },
 
     settingsVoice: {
