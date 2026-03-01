@@ -25,6 +25,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Production
 - `yarn ota` - Deploy over-the-air updates via EAS Update to production branch
 
+### Android Local Builds
+To build a release APK locally and install on a connected device via adb:
+```bash
+APP_ENV=production npx expo run:android --variant release
+```
+This builds a release APK at `android/app/build/outputs/apk/release/app-release.apk` and auto-installs on the connected device. Requires Android SDK and a device connected via `adb`.
+
+**Do NOT use EAS Build** (`eas build`) — use local builds with `expo run:android` instead.
+
+Environment variants:
+- `APP_ENV=development` — dev build (`com.slopus.happy.dev`)
+- `APP_ENV=preview` — preview build (`com.slopus.happy.preview`)
+- `APP_ENV=production` — production build (`com.ex3ndr.happy`)
+
 ## Changelog Management
 
 The app includes an in-app changelog feature that displays version history to users. When making changes:

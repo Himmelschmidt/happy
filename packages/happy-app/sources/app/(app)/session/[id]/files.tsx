@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, ActivityIndicator, Platform, TextInput, ScrollView, Pressable, BackHandler } from 'react-native';
+import { View, ActivityIndicator, Platform, TextInput, ScrollView, Pressable } from 'react-native';
 import { t } from '@/text';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -142,7 +142,6 @@ export default function FilesScreen() {
         router.push(`/session/${sessionId}/file?path=${encodedPath}`);
     }, [navigateToDirectory, router, sessionId]);
 
-    const isAtSessionRoot = currentPath === sessionRootPath;
     const isAtFilesystemRoot = currentPath === '/';
 
     const goUp = React.useCallback(() => {
@@ -150,20 +149,6 @@ export default function FilesScreen() {
         const parentPath = currentPath.replace(/\/[^/]+\/?$/, '') || '/';
         navigateToDirectory(parentPath);
     }, [currentPath, isAtFilesystemRoot, navigateToDirectory]);
-
-    // Intercept hardware/gesture back button: navigate up within session,
-    // but at the session root let the default back behavior exit the file explorer
-    useFocusEffect(
-        React.useCallback(() => {
-            if (isAtSessionRoot) return;
-
-            const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-                goUp();
-                return true;
-            });
-            return () => handler.remove();
-        }, [isAtSessionRoot, goUp])
-    );
 
     // Override header back button to navigate up directories (always visible unless at /)
     React.useEffect(() => {
