@@ -142,6 +142,7 @@ export default function FilesScreen() {
         router.push(`/session/${sessionId}/file?path=${encodedPath}`);
     }, [navigateToDirectory, router, sessionId]);
 
+    const isAtSessionRoot = currentPath === sessionRootPath;
     const isAtFilesystemRoot = currentPath === '/';
 
     const goUp = React.useCallback(() => {
@@ -150,19 +151,18 @@ export default function FilesScreen() {
         navigateToDirectory(parentPath);
     }, [currentPath, isAtFilesystemRoot, navigateToDirectory]);
 
-    // Intercept hardware/gesture back button to navigate up directories
-    // Must use useFocusEffect so the handler is only active when this screen is focused,
-    // otherwise it intercepts back gestures meant for screens on top (e.g. file.tsx)
+    // Intercept hardware/gesture back button: navigate up within session,
+    // but at the session root let the default back behavior exit the file explorer
     useFocusEffect(
         React.useCallback(() => {
-            if (isAtFilesystemRoot) return;
+            if (isAtSessionRoot) return;
 
             const handler = BackHandler.addEventListener('hardwareBackPress', () => {
                 goUp();
                 return true;
             });
             return () => handler.remove();
-        }, [isAtFilesystemRoot, goUp])
+        }, [isAtSessionRoot, goUp])
     );
 
     // Override header back button to navigate up directories (always visible unless at /)
