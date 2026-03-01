@@ -40,6 +40,7 @@ interface WriteFileRequest {
     path: string;
     content: string; // base64 encoded
     expectedHash?: string | null; // null for new files, hash for existing files
+    overwrite?: boolean; // skip hash check, just write (used for file uploads from phone)
 }
 
 interface WriteFileResponse {
@@ -263,6 +264,14 @@ export function registerCommonHandlers(rpcHandlerManager: RpcHandlerManager, wor
         }
 
         try {
+            // Overwrite mode: skip all hash verification (used for file uploads from phone)
+            if (data.overwrite) {
+                const buffer = Buffer.from(data.content, 'base64');
+                await writeFile(data.path, buffer);
+                const hash = createHash('sha256').update(buffer).digest('hex');
+                return { success: true, hash };
+            }
+
             // If expectedHash is provided (not null), verify existing file
             if (data.expectedHash !== null && data.expectedHash !== undefined) {
                 try {

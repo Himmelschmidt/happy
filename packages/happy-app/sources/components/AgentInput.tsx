@@ -1,7 +1,9 @@
 import { Ionicons, Octicons } from '@expo/vector-icons';
 import * as React from 'react';
-import { View, Platform, useWindowDimensions, ViewStyle, Text, ActivityIndicator, TouchableWithoutFeedback, Image as RNImage, Pressable } from 'react-native';
+import { View, Platform, useWindowDimensions, ViewStyle, Text, ActivityIndicator, TouchableWithoutFeedback, Image as RNImage, Pressable, Alert } from 'react-native';
 import { Image } from 'expo-image';
+import * as DocumentPicker from 'expo-document-picker';
+import { File as ExpoFile } from 'expo-file-system';
 import { layout } from './layout';
 import { MultiTextInput, KeyPressEvent } from './MultiTextInput';
 import { Typography } from '@/constants/Typography';
@@ -23,6 +25,7 @@ import { t } from '@/text';
 import { Metadata } from '@/sync/storageTypes';
 import { AIBackendProfile, getProfileEnvironmentVariables, validateProfileForAgent } from '@/sync/settings';
 import { getBuiltInProfile } from '@/sync/profileUtils';
+import { sessionWriteFile } from '@/sync/ops';
 
 interface AgentInputProps {
     value: string;
@@ -358,6 +361,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
 
     // Abort button state
     const [isAborting, setIsAborting] = React.useState(false);
+    const [isUploading, setIsUploading] = React.useState(false);
     const shakerRef = React.useRef<ShakeInstance>(null);
     const inputRef = React.useRef<MultiTextInputHandle>(null);
 
@@ -461,6 +465,50 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
             setIsAborting(false);
         }
     }, [props.onAbort]);
+
+    // Handle file upload from phone
+    const handleFileUpload = React.useCallback(async () => {
+        if (!props.sessionId || !props.metadata?.path) return;
+
+        try {
+            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+            if (result.canceled || result.assets.length === 0) return;
+
+            const asset = result.assets[0];
+            setIsUploading(true);
+            hapticsLight();
+
+            const file = new ExpoFile(asset.uri);
+            const base64Content = await file.base64();
+
+            const targetPath = `${props.metadata.path}/${asset.name}`;
+            const response = await sessionWriteFile(
+                props.sessionId,
+                targetPath,
+                base64Content,
+                undefined,
+                true // overwrite
+            );
+
+            if (response.success) {
+                // Insert the file path into the text input
+                const currentText = props.value;
+                const newText = currentText.length > 0
+                    ? `${currentText} ${targetPath}`
+                    : targetPath;
+                props.onChangeText(newText);
+                hapticsLight();
+            } else {
+                hapticsError();
+                Alert.alert('Upload failed', response.error || 'Failed to upload file');
+            }
+        } catch (error) {
+            hapticsError();
+            Alert.alert('Upload failed', error instanceof Error ? error.message : 'Unknown error');
+        } finally {
+            setIsUploading(false);
+        }
+    }, [props.sessionId, props.metadata?.path, props.value, props.onChangeText]);
 
     // Handle keyboard navigation
     const handleKeyPress = React.useCallback((event: KeyPressEvent): boolean => {
@@ -1094,6 +1142,38 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
 
                                 {/* Git Status Badge */}
                                 <GitStatusButton sessionId={props.sessionId} onPress={props.onFileViewerPress} />
+
+                                {/* File upload button */}
+                                {props.sessionId && props.metadata?.path && (
+                                    <Pressable
+                                        onPress={handleFileUpload}
+                                        disabled={isUploading}
+                                        hitSlop={{ top: 5, bottom: 10, left: 0, right: 0 }}
+                                        style={(p) => ({
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            borderRadius: Platform.select({ default: 16, android: 20 }),
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 6,
+                                            justifyContent: 'center',
+                                            height: 32,
+                                            opacity: p.pressed ? 0.7 : 1,
+                                        })}
+                                    >
+                                        {isUploading ? (
+                                            <ActivityIndicator
+                                                size="small"
+                                                color={theme.colors.button.secondary.tint}
+                                            />
+                                        ) : (
+                                            <Ionicons
+                                                name="attach"
+                                                size={18}
+                                                color={theme.colors.button.secondary.tint}
+                                            />
+                                        )}
+                                    </Pressable>
+                                )}
                                 </View>
 
                                 {/* Send/Voice button - aligned with first row */}

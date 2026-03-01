@@ -56,6 +56,7 @@ interface SessionWriteFileRequest {
     path: string;
     content: string; // base64 encoded
     expectedHash?: string | null;
+    overwrite?: boolean; // skip hash check, just write (used for file uploads from phone)
 }
 
 interface SessionWriteFileResponse {
@@ -387,10 +388,11 @@ export async function sessionWriteFile(
     sessionId: string,
     path: string,
     content: string,
-    expectedHash?: string | null
+    expectedHash?: string | null,
+    overwrite?: boolean
 ): Promise<SessionWriteFileResponse> {
     try {
-        const request: SessionWriteFileRequest = { path, content, expectedHash };
+        const request: SessionWriteFileRequest = { path, content, expectedHash, overwrite };
         const response = await apiSocket.sessionRPC<SessionWriteFileResponse, SessionWriteFileRequest>(
             sessionId,
             'writeFile',
