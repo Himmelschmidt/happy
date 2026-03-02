@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "661686818848",
-    "project_id": "happy-22511",
-    "storage_bucket": "happy-22511.firebasestorage.app"
+    "project_number": "565009973020",
+    "project_id": "happy-sholom-d2bb6",
+    "storage_bucket": "happy-sholom-d2bb6.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:661686818848:android:892f7220d492cfed494445",
+        "mobilesdk_app_id": "1:565009973020:android:6992ae13ab12d1cb0684d9",
         "android_client_info": {
           "package_name": "com.slopus.happy.dev"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCjJP5s5373ClKzJ1cxT8F49TofIueMfOE"
+          "current_key": "AIzaSyApKmhVeBTh2Vv4m6U1vP-oukN77dmGdQE"
         }
       ],
       "services": {
