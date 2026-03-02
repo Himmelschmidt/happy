@@ -161,56 +161,62 @@ export default function FileScreen() {
     const getFileLanguage = React.useCallback((path: string): string | null => {
         const ext = path.split('.').pop()?.toLowerCase();
         switch (ext) {
-            case 'js':
-            case 'jsx':
-                return 'javascript';
-            case 'ts':
-            case 'tsx':
-                return 'typescript';
-            case 'py':
-                return 'python';
-            case 'html':
-            case 'htm':
-                return 'html';
-            case 'css':
-                return 'css';
-            case 'json':
-                return 'json';
-            case 'md':
-                return 'markdown';
-            case 'xml':
-                return 'xml';
-            case 'yaml':
-            case 'yml':
-                return 'yaml';
-            case 'sh':
-            case 'bash':
-                return 'bash';
-            case 'sql':
-                return 'sql';
-            case 'go':
-                return 'go';
-            case 'rust':
-            case 'rs':
-                return 'rust';
-            case 'java':
-                return 'java';
-            case 'c':
-                return 'c';
-            case 'cpp':
-            case 'cc':
-            case 'cxx':
-                return 'cpp';
-            case 'php':
-                return 'php';
-            case 'rb':
-                return 'ruby';
-            case 'swift':
-                return 'swift';
-            case 'kt':
-                return 'kotlin';
-            default:
-                return null;
+            // Web
+            case 'js': case 'jsx': case 'mjs': case 'cjs': return 'javascript';
+            case 'ts': case 'tsx': case 'mts': case 'cts': return 'typescript';
+            case 'html': case 'htm': case 'svelte': case 'vue': return 'html';
+            case 'css': case 'scss': case 'sass': case 'less': return 'css';
+            case 'json': case 'jsonc': case 'json5': return 'json';
+            // Scripting
+            case 'py': case 'pyw': case 'pyi': return 'python';
+            case 'rb': case 'erb': case 'rake': case 'gemspec': return 'ruby';
+            case 'php': case 'phtml': return 'php';
+            case 'pl': case 'pm': return 'perl';
+            case 'lua': return 'lua';
+            case 'r': case 'R': return 'r';
+            // Shell
+            case 'sh': case 'bash': case 'zsh': case 'fish': return 'bash';
+            case 'ps1': case 'psm1': return 'powershell';
+            // Systems
+            case 'c': case 'h': return 'c';
+            case 'cpp': case 'cc': case 'cxx': case 'hpp': case 'hxx': case 'hh': return 'cpp';
+            case 'rs': return 'rust';
+            case 'go': return 'go';
+            case 'zig': return 'zig';
+            // JVM
+            case 'java': return 'java';
+            case 'kt': case 'kts': return 'kotlin';
+            case 'scala': case 'sc': return 'scala';
+            case 'groovy': case 'gradle': return 'groovy';
+            // .NET
+            case 'cs': return 'csharp';
+            case 'fs': case 'fsx': return 'fsharp';
+            // Mobile
+            case 'swift': return 'swift';
+            case 'dart': return 'dart';
+            // Functional
+            case 'hs': case 'lhs': return 'haskell';
+            case 'ex': case 'exs': return 'elixir';
+            case 'erl': case 'hrl': return 'erlang';
+            case 'clj': case 'cljs': case 'cljc': return 'clojure';
+            case 'ml': case 'mli': return 'ocaml';
+            // Data / Config
+            case 'sql': return 'sql';
+            case 'xml': case 'xsl': case 'xslt': case 'plist': return 'xml';
+            case 'yaml': case 'yml': return 'yaml';
+            case 'toml': return 'toml';
+            case 'ini': case 'cfg': case 'conf': return 'ini';
+            case 'env': return 'bash';
+            // Docs
+            case 'md': case 'mdx': return 'markdown';
+            case 'tex': case 'latex': return 'latex';
+            case 'rst': return 'rst';
+            // Infra / DevOps
+            case 'tf': case 'tfvars': return 'hcl';
+            case 'Dockerfile': return 'dockerfile';
+            case 'proto': return 'protobuf';
+            case 'graphql': case 'gql': return 'graphql';
+            default: return null;
         }
     }, []);
 
