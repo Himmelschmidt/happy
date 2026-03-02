@@ -7,8 +7,10 @@ import {
     type ApiMessage,
 } from '@slopus/happy-wire';
 import { GitHubProfileSchema, ImageRefSchema } from './profile';
-import { RelationshipStatusSchema, UserProfileSchema } from './friendTypes';
-import { FeedBodySchema } from './feedTypes';
+// Inline passthrough schemas – friend/feed type files removed
+const RelationshipStatusSchema = z.string();
+const UserProfileSchema = z.any();
+const FeedBodySchema = z.any();
 
 export {
     ApiMessageSchema,

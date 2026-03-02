@@ -1,4 +1,4 @@
-import { useSocketStatus, useFriendRequests, useSettings } from '@/sync/storage';
+import { useSocketStatus, useSettings } from '@/sync/storage';
 import * as React from 'react';
 import { Text, View, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import { useInboxHasContent } from '@/hooks/useInboxHasContent';
+import { useNotifications } from '@/firebase/notifications';
 import { Ionicons } from '@expo/vector-icons';
 
 const stylesheet = StyleSheet.create((theme, runtime) => ({
@@ -137,7 +138,7 @@ export const SidebarView = React.memo(() => {
     const headerHeight = useHeaderHeight();
     const socketStatus = useSocketStatus();
     const realtimeStatus = useRealtimeStatus();
-    const friendRequests = useFriendRequests();
+    const { unreadCount } = useNotifications();
     const inboxHasContent = useInboxHasContent();
     const settings = useSettings();
 
@@ -248,14 +249,14 @@ export const SidebarView = React.memo(() => {
                                 style={[{ width: 32, height: 32 }]}
                                 tintColor={theme.colors.header.tint}
                             />
-                            {friendRequests.length > 0 && (
+                            {unreadCount > 0 && (
                                 <View style={styles.badge}>
                                     <Text style={styles.badgeText}>
-                                        {friendRequests.length > 99 ? '99+' : friendRequests.length}
+                                        {unreadCount > 99 ? '99+' : unreadCount}
                                     </Text>
                                 </View>
                             )}
-                            {inboxHasContent && friendRequests.length === 0 && (
+                            {inboxHasContent && unreadCount === 0 && (
                                 <View style={styles.indicatorDot} />
                             )}
                         </Pressable>

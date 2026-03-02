@@ -9,6 +9,9 @@ export interface AppConfig {
     elevenLabsAgentIdDev?: string;
     elevenLabsAgentIdProd?: string;
     serverUrl?: string;
+    firebaseApiKey?: string;
+    firebaseProjectId?: string;
+    firebaseStorageBucket?: string;
 }
 
 /**
@@ -95,6 +98,18 @@ export function loadAppConfig(): AppConfig {
     if (process.env.EXPO_PUBLIC_SERVER_URL && config.serverUrl !== process.env.EXPO_PUBLIC_SERVER_URL) {
         console.log('[loadAppConfig] Override serverUrl from EXPO_PUBLIC_SERVER_URL');
         config.serverUrl = process.env.EXPO_PUBLIC_SERVER_URL;
+    }
+    if (process.env.EXPO_PUBLIC_FIREBASE_API_KEY && config.firebaseApiKey !== process.env.EXPO_PUBLIC_FIREBASE_API_KEY) {
+        console.log('[loadAppConfig] Override firebaseApiKey from EXPO_PUBLIC_FIREBASE_API_KEY');
+        config.firebaseApiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY;
+    }
+    if (process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID && config.firebaseProjectId !== process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID) {
+        console.log('[loadAppConfig] Override firebaseProjectId from EXPO_PUBLIC_FIREBASE_PROJECT_ID');
+        config.firebaseProjectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+    }
+    if (process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET && config.firebaseStorageBucket !== process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET) {
+        console.log('[loadAppConfig] Override firebaseStorageBucket from EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET');
+        config.firebaseStorageBucket = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET;
     }
 
     return config as AppConfig;

@@ -1,21 +1,18 @@
 import * as React from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAcceptedFriends, useFriendRequests, useRequestedFriends, useFeedItems, useFeedLoaded, useFriendsLoaded, useRealtimeStatus } from '@/sync/storage';
-import { UserCard } from '@/components/UserCard';
+import { useNotifications, markNotificationRead, type Notification } from '@/firebase/notifications';
 import { t } from '@/text';
-import { trackFriendsSearch, trackFriendsProfileView } from '@/track';
-import { ItemGroup } from '@/components/ItemGroup';
 import { UpdateBanner } from './UpdateBanner';
 import { Typography } from '@/constants/Typography';
-import { useRouter } from 'expo-router';
 import { layout } from '@/components/layout';
 import { useIsTablet } from '@/utils/responsive';
 import { Header } from './navigation/Header';
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { FeedItemCard } from './FeedItemCard';
 import { VoiceAssistantStatusBar } from './VoiceAssistantStatusBar';
+import { useRealtimeStatus } from '@/sync/storage';
+
+const BODY_PREVIEW_LENGTH = 120;
 
 const styles = StyleSheet.create((theme) => ({
     container: {
@@ -45,21 +42,58 @@ const styles = StyleSheet.create((theme) => ({
         textAlign: 'center',
         lineHeight: 22,
     },
-    sectionHeader: {
-        fontSize: 14,
+    card: {
+        backgroundColor: theme.colors.surface,
+        marginHorizontal: 16,
+        marginTop: 10,
+        borderRadius: 12,
+        padding: 14,
+        shadowColor: theme.colors.shadow.color,
+        shadowOffset: { width: 0, height: 0.33 },
+        shadowOpacity: theme.colors.shadow.opacity,
+        shadowRadius: 0,
+        elevation: 1,
+    },
+    cardUnread: {
+        borderLeftWidth: 3,
+        borderLeftColor: theme.colors.button.primary.background,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    cardTitle: {
+        fontSize: 16,
         ...Typography.default('semiBold'),
+        color: theme.colors.text,
+        flex: 1,
+    },
+    cardTime: {
+        fontSize: 12,
+        ...Typography.default(),
         color: theme.colors.textSecondary,
-        paddingHorizontal: 16,
-        paddingTop: 24,
-        paddingBottom: 8,
-        textTransform: 'uppercase',
+        marginLeft: 8,
+    },
+    cardBody: {
+        fontSize: 14,
+        ...Typography.default(),
+        color: theme.colors.text,
+        lineHeight: 20,
+    },
+    expandHint: {
+        fontSize: 13,
+        ...Typography.default(),
+        color: theme.colors.textSecondary,
+        marginTop: 4,
     },
 }));
 
 interface InboxViewProps {
 }
 
-// Header components for tablet mode only (phone mode header is in MainView)
+/** Tablet-mode header title */
 function HeaderTitleTablet() {
     const { theme } = useUnistyles();
     return (
@@ -74,60 +108,80 @@ function HeaderTitleTablet() {
     );
 }
 
-function HeaderRightTablet() {
-    const router = useRouter();
-    const { theme } = useUnistyles();
-    return (
-        <Pressable
-            onPress={() => {
-                trackFriendsSearch();
-                router.push('/friends/search');
-            }}
-            hitSlop={15}
-            style={{
-                width: 32,
-                height: 32,
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}
-        >
-            <Ionicons name="person-add-outline" size={24} color={theme.colors.header.tint} />
-        </Pressable>
-    );
+/** Format a timestamp as a short relative string ("2m", "3h", "Jan 5") */
+function formatRelativeTime(ts: number): string {
+    const diff = Date.now() - ts;
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return 'now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    const date = new Date(ts);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/** Single notification card */
+const NotificationCard = React.memo(({ notification }: { notification: Notification }) => {
+    const [expanded, setExpanded] = React.useState(false);
+
+    const isLong = notification.body.length > BODY_PREVIEW_LENGTH;
+    const displayBody = expanded || !isLong
+        ? notification.body
+        : notification.body.slice(0, BODY_PREVIEW_LENGTH) + '…';
+
+    const handlePress = React.useCallback(() => {
+        if (!notification.read) {
+            markNotificationRead(notification.id);
+        }
+        if (isLong) {
+            setExpanded((prev) => !prev);
+        }
+    }, [notification.id, notification.read, isLong]);
+
+    return (
+        <Pressable onPress={handlePress}>
+            <View style={[styles.card, !notification.read && styles.cardUnread]}>
+                <View style={styles.cardHeader}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>{notification.title}</Text>
+                    <Text style={styles.cardTime}>{formatRelativeTime(notification.timestamp)}</Text>
+                </View>
+                <Text style={styles.cardBody}>{displayBody}</Text>
+                {isLong && !expanded && (
+                    <Text style={styles.expandHint}>Tap to expand</Text>
+                )}
+            </View>
+        </Pressable>
+    );
+});
+
 export const InboxView = React.memo(({}: InboxViewProps) => {
-    const router = useRouter();
-    const friends = useAcceptedFriends();
-    const friendRequests = useFriendRequests();
-    const requestedFriends = useRequestedFriends();
-    const feedItems = useFeedItems();
-    const feedLoaded = useFeedLoaded();
-    const friendsLoaded = useFriendsLoaded();
+    const { notifications, loading, unreadCount } = useNotifications();
     const { theme } = useUnistyles();
     const isTablet = useIsTablet();
     const realtimeStatus = useRealtimeStatus();
 
-    const isLoading = !feedLoaded || !friendsLoaded;
-    const isEmpty = !isLoading && friendRequests.length === 0 && requestedFriends.length === 0 && friends.length === 0 && feedItems.length === 0;
+    const tabletHeader = isTablet ? (
+        <View style={{ backgroundColor: theme.colors.groupped.background }}>
+            <Header
+                title={<HeaderTitleTablet />}
+                headerRight={() => null}
+                headerLeft={() => null}
+                headerShadowVisible={false}
+                headerTransparent={true}
+            />
+            {realtimeStatus !== 'disconnected' && (
+                <VoiceAssistantStatusBar variant="full" />
+            )}
+        </View>
+    ) : null;
 
-    if (isLoading) {
+    if (loading) {
         return (
             <View style={styles.container}>
-                {isTablet && (
-                    <View style={{ backgroundColor: theme.colors.groupped.background }}>
-                        <Header
-                            title={<HeaderTitleTablet />}
-                            headerRight={() => <HeaderRightTablet />}
-                            headerLeft={() => null}
-                            headerShadowVisible={false}
-                            headerTransparent={true}
-                        />
-                        {realtimeStatus !== 'disconnected' && (
-                            <VoiceAssistantStatusBar variant="full" />
-                        )}
-                    </View>
-                )}
+                {tabletHeader}
                 <UpdateBanner />
                 <View style={styles.emptyContainer}>
                     <ActivityIndicator size="large" color={theme.colors.textSecondary} />
@@ -136,23 +190,10 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
         );
     }
 
-    if (isEmpty) {
+    if (notifications.length === 0) {
         return (
             <View style={styles.container}>
-                {isTablet && (
-                    <View style={{ backgroundColor: theme.colors.groupped.background }}>
-                        <Header
-                            title={<HeaderTitleTablet />}
-                            headerRight={() => <HeaderRightTablet />}
-                            headerLeft={() => null}
-                            headerShadowVisible={false}
-                            headerTransparent={true}
-                        />
-                        {realtimeStatus !== 'disconnected' && (
-                            <VoiceAssistantStatusBar variant="full" />
-                        )}
-                    </View>
-                )}
+                {tabletHeader}
                 <UpdateBanner />
                 <View style={styles.emptyContainer}>
                     <Image
@@ -170,90 +211,17 @@ export const InboxView = React.memo(({}: InboxViewProps) => {
 
     return (
         <View style={styles.container}>
-            {isTablet && (
-                <View style={{ backgroundColor: theme.colors.groupped.background }}>
-                    <Header
-                        title={<HeaderTitleTablet />}
-                        headerRight={() => <HeaderRightTablet />}
-                        headerLeft={() => null}
-                        headerShadowVisible={false}
-                        headerTransparent={true}
-                    />
-                    {realtimeStatus !== 'disconnected' && (
-                        <VoiceAssistantStatusBar variant="full" />
-                    )}
-                </View>
-            )}
+            {tabletHeader}
             <ScrollView contentContainerStyle={{
                 maxWidth: layout.maxWidth,
                 alignSelf: 'center',
-                width: '100%'
+                width: '100%',
+                paddingBottom: 24,
             }}>
                 <UpdateBanner />
-                
-                {feedItems.length > 0 && (
-                    <>
-                        <ItemGroup title={t('inbox.updates')}>
-                            {feedItems.map((item) => (
-                                <FeedItemCard
-                                    key={item.id}
-                                    item={item}
-                                />
-                            ))}
-                        </ItemGroup>
-                    </>
-                )}
-                
-                {friendRequests.length > 0 && (
-                    <>
-                        <ItemGroup title={t('friends.pendingRequests')}>
-                            {friendRequests.map((friend) => (
-                                <UserCard
-                                    key={friend.id}
-                                    user={friend}
-                                    onPress={() => {
-                                        trackFriendsProfileView();
-                                        router.push(`/user/${friend.id}`);
-                                    }}
-                                />
-                            ))}
-                        </ItemGroup>
-                    </>
-                )}
-
-                {requestedFriends.length > 0 && (
-                    <>
-                        <ItemGroup title={t('friends.requestPending')}>
-                            {requestedFriends.map((friend) => (
-                                <UserCard
-                                    key={friend.id}
-                                    user={friend}
-                                    onPress={() => {
-                                        trackFriendsProfileView();
-                                        router.push(`/user/${friend.id}`);
-                                    }}
-                                />
-                            ))}
-                        </ItemGroup>
-                    </>
-                )}
-
-                {friends.length > 0 && (
-                    <>
-                        <ItemGroup title={t('friends.myFriends')}>
-                            {friends.map((friend) => (
-                                <UserCard
-                                    key={friend.id}
-                                    user={friend}
-                                    onPress={() => {
-                                        trackFriendsProfileView();
-                                        router.push(`/user/${friend.id}`);
-                                    }}
-                                />
-                            ))}
-                        </ItemGroup>
-                    </>
-                )}
+                {notifications.map((n) => (
+                    <NotificationCard key={n.id} notification={n} />
+                ))}
             </ScrollView>
         </View>
     );

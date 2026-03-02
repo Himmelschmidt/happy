@@ -27,6 +27,11 @@ class Configuration {
   public readonly isExperimentalEnabled: boolean
   public readonly disableCaffeinate: boolean
 
+  // Firebase configuration for notifications
+  public readonly firebaseApiKey: string
+  public readonly firebaseProjectId: string
+  public readonly firebaseStorageBucket: string
+
   constructor() {
     // Server configuration - priority: parameter > environment > default
     this.serverUrl = process.env.HAPPY_SERVER_URL || 'https://api.cluster-fluster.com'
@@ -53,6 +58,11 @@ class Configuration {
 
     this.isExperimentalEnabled = ['true', '1', 'yes'].includes(process.env.HAPPY_EXPERIMENTAL?.toLowerCase() || '');
     this.disableCaffeinate = ['true', '1', 'yes'].includes(process.env.HAPPY_DISABLE_CAFFEINATE?.toLowerCase() || '');
+
+    // Firebase config for Firestore notifications
+    this.firebaseApiKey = process.env.HAPPY_FIREBASE_API_KEY || ''
+    this.firebaseProjectId = process.env.HAPPY_FIREBASE_PROJECT_ID || ''
+    this.firebaseStorageBucket = process.env.HAPPY_FIREBASE_STORAGE_BUCKET || ''
 
     this.currentCliVersion = packageJson.version
 

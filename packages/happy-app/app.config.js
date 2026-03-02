@@ -169,7 +169,10 @@ export default {
                 postHogKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
                 revenueCatAppleKey: process.env.EXPO_PUBLIC_REVENUE_CAT_APPLE,
                 revenueCatGoogleKey: process.env.EXPO_PUBLIC_REVENUE_CAT_GOOGLE,
-                revenueCatStripeKey: process.env.EXPO_PUBLIC_REVENUE_CAT_STRIPE
+                revenueCatStripeKey: process.env.EXPO_PUBLIC_REVENUE_CAT_STRIPE,
+                firebaseApiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+                firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+                firebaseStorageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
             }
         },
         owner: "bulkacorp"

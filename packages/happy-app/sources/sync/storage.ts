@@ -9,7 +9,6 @@ import { applySettings, Settings } from "./settings";
 import { LocalSettings, applyLocalSettings } from "./localSettings";
 import { Purchases, customerInfoToPurchases } from "./purchases";
 import { Profile } from "./profile";
-import { UserProfile, RelationshipUpdatedEvent } from "./friendTypes";
 import { loadSettings, loadLocalSettings, saveLocalSettings, saveSettings, loadPurchases, savePurchases, loadProfile, saveProfile, loadSessionDrafts, saveSessionDrafts, loadSessionPermissionModes, saveSessionPermissionModes } from "./persistence";
 import type { PermissionModeKey } from '@/components/PermissionModeSelector';
 import type { CustomerInfo } from './revenueCat/types';
@@ -19,7 +18,6 @@ import { getCurrentRealtimeSessionId, getVoiceSession } from '@/realtime/Realtim
 import { isMutableTool } from "@/components/tools/knownTools";
 import { projectManager } from "./projectManager";
 import { DecryptedArtifact } from "./artifactTypes";
-import { FeedItem } from "./feedTypes";
 
 // Debounce timer for realtimeMode changes
 let realtimeModeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -82,14 +80,6 @@ interface StorageState {
     sessionGitStatus: Record<string, GitStatus | null>;
     machines: Record<string, Machine>;
     artifacts: Record<string, DecryptedArtifact>;  // New artifacts storage
-    friends: Record<string, UserProfile>;  // All relationships (friends, pending, requested, etc.)
-    users: Record<string, UserProfile | null>;  // Global user cache, null = 404/failed fetch
-    feedItems: FeedItem[];  // Simple list of feed items
-    feedHead: string | null;  // Newest cursor
-    feedTail: string | null;  // Oldest cursor
-    feedHasMore: boolean;
-    feedLoaded: boolean;  // True after initial feed fetch
-    friendsLoaded: boolean;  // True after initial friends fetch
     realtimeStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
     realtimeMode: 'idle' | 'speaking';
     socketStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -134,18 +124,6 @@ interface StorageState {
     getProjectGitStatus: (projectId: string) => import('./storageTypes').GitStatus | null;
     getSessionProjectGitStatus: (sessionId: string) => import('./storageTypes').GitStatus | null;
     updateSessionProjectGitStatus: (sessionId: string, status: import('./storageTypes').GitStatus | null) => void;
-    // Friend management methods
-    applyFriends: (friends: UserProfile[]) => void;
-    applyRelationshipUpdate: (event: RelationshipUpdatedEvent) => void;
-    getFriend: (userId: string) => UserProfile | undefined;
-    getAcceptedFriends: () => UserProfile[];
-    // User cache methods
-    applyUsers: (users: Record<string, UserProfile | null>) => void;
-    getUser: (userId: string) => UserProfile | null | undefined;
-    assumeUsers: (userIds: string[]) => Promise<void>;
-    // Feed methods
-    applyFeedItems: (items: FeedItem[]) => void;
-    clearFeed: () => void;
 }
 
 // Helper function to build unified list view data from sessions and machines
@@ -260,14 +238,6 @@ export const storage = create<StorageState>()((set, get) => {
         sessions: {},
         machines: {},
         artifacts: {},  // Initialize artifacts
-        friends: {},  // Initialize relationships cache
-        users: {},  // Initialize global user cache
-        feedItems: [],  // Initialize feed items list
-        feedHead: null,
-        feedTail: null,
-        feedHasMore: false,
-        feedLoaded: false,  // Initialize as false
-        friendsLoaded: false,  // Initialize as false
         sessionsData: null,  // Legacy - to be removed
         sessionListViewData: null,
         sessionMessages: {},
@@ -942,129 +912,6 @@ export const storage = create<StorageState>()((set, get) => {
                 sessionListViewData
             };
         }),
-        // Friend management methods
-        applyFriends: (friends: UserProfile[]) => set((state) => {
-            const mergedFriends = { ...state.friends };
-            friends.forEach(friend => {
-                mergedFriends[friend.id] = friend;
-            });
-            return {
-                ...state,
-                friends: mergedFriends,
-                friendsLoaded: true  // Mark as loaded after first fetch
-            };
-        }),
-        applyRelationshipUpdate: (event: RelationshipUpdatedEvent) => set((state) => {
-            const { fromUserId, toUserId, status, action, fromUser, toUser } = event;
-            const currentUserId = state.profile.id;
-            
-            // Update friends cache
-            const updatedFriends = { ...state.friends };
-            
-            // Determine which user profile to update based on perspective
-            const otherUserId = fromUserId === currentUserId ? toUserId : fromUserId;
-            const otherUser = fromUserId === currentUserId ? toUser : fromUser;
-            
-            if (action === 'deleted' || status === 'none') {
-                // Remove from friends if deleted or status is none
-                delete updatedFriends[otherUserId];
-            } else if (otherUser) {
-                // Update or add the user profile with current status
-                updatedFriends[otherUserId] = otherUser;
-            }
-            
-            return {
-                ...state,
-                friends: updatedFriends
-            };
-        }),
-        getFriend: (userId: string) => {
-            return get().friends[userId];
-        },
-        getAcceptedFriends: () => {
-            const friends = get().friends;
-            return Object.values(friends).filter(friend => friend.status === 'friend');
-        },
-        // User cache methods
-        applyUsers: (users: Record<string, UserProfile | null>) => set((state) => ({
-            ...state,
-            users: { ...state.users, ...users }
-        })),
-        getUser: (userId: string) => {
-            return get().users[userId];  // Returns UserProfile | null | undefined
-        },
-        assumeUsers: async (userIds: string[]) => {
-            // This will be implemented in sync.ts as it needs access to credentials
-            // Just a placeholder here for the interface
-            const { sync } = await import('./sync');
-            return sync.assumeUsers(userIds);
-        },
-        // Feed methods
-        applyFeedItems: (items: FeedItem[]) => set((state) => {
-            // Always mark feed as loaded even if empty
-            if (items.length === 0) {
-                return {
-                    ...state,
-                    feedLoaded: true  // Mark as loaded even when empty
-                };
-            }
-
-            // Create a map of existing items for quick lookup
-            const existingMap = new Map<string, FeedItem>();
-            state.feedItems.forEach(item => {
-                existingMap.set(item.id, item);
-            });
-
-            // Process new items
-            const updatedItems = [...state.feedItems];
-            let head = state.feedHead;
-            let tail = state.feedTail;
-
-            items.forEach(newItem => {
-                // Remove items with same repeatKey if it exists
-                if (newItem.repeatKey) {
-                    const indexToRemove = updatedItems.findIndex(item =>
-                        item.repeatKey === newItem.repeatKey
-                    );
-                    if (indexToRemove !== -1) {
-                        updatedItems.splice(indexToRemove, 1);
-                    }
-                }
-
-                // Add new item if it doesn't exist
-                if (!existingMap.has(newItem.id)) {
-                    updatedItems.push(newItem);
-                }
-
-                // Update head/tail cursors
-                if (!head || newItem.counter > parseInt(head.substring(2), 10)) {
-                    head = newItem.cursor;
-                }
-                if (!tail || newItem.counter < parseInt(tail.substring(2), 10)) {
-                    tail = newItem.cursor;
-                }
-            });
-
-            // Sort by counter (desc - newest first)
-            updatedItems.sort((a, b) => b.counter - a.counter);
-
-            return {
-                ...state,
-                feedItems: updatedItems,
-                feedHead: head,
-                feedTail: tail,
-                feedLoaded: true  // Mark as loaded after first fetch
-            };
-        }),
-        clearFeed: () => set((state) => ({
-            ...state,
-            feedItems: [],
-            feedHead: null,
-            feedTail: null,
-            feedHasMore: false,
-            feedLoaded: false,  // Reset loading flag
-            friendsLoaded: false  // Reset loading flag
-        })),
     }
 });
 
@@ -1253,44 +1100,3 @@ export function useProfile() {
     return storage(useShallow((state) => state.profile));
 }
 
-export function useFriends() {
-    return storage(useShallow((state) => state.friends));
-}
-
-export function useFriendRequests() {
-    return storage(useShallow((state) => {
-        // Filter friends to get pending requests (where status is 'pending')
-        return Object.values(state.friends).filter(friend => friend.status === 'pending');
-    }));
-}
-
-export function useAcceptedFriends() {
-    return storage(useShallow((state) => {
-        return Object.values(state.friends).filter(friend => friend.status === 'friend');
-    }));
-}
-
-export function useFeedItems() {
-    return storage(useShallow((state) => state.feedItems));
-}
-export function useFeedLoaded() {
-    return storage((state) => state.feedLoaded);
-}
-export function useFriendsLoaded() {
-    return storage((state) => state.friendsLoaded);
-}
-
-export function useFriend(userId: string | undefined) {
-    return storage(useShallow((state) => userId ? state.friends[userId] : undefined));
-}
-
-export function useUser(userId: string | undefined) {
-    return storage(useShallow((state) => userId ? state.users[userId] : undefined));
-}
-
-export function useRequestedFriends() {
-    return storage(useShallow((state) => {
-        // Filter friends to get sent requests (where status is 'requested')
-        return Object.values(state.friends).filter(friend => friend.status === 'requested');
-    }));
-}

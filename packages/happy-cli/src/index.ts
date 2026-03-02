@@ -20,7 +20,9 @@ import { getLatestDaemonLog } from './ui/logger'
 import { killRunawayHappyProcesses } from './daemon/doctor'
 import { install } from './daemon/install'
 import { uninstall } from './daemon/uninstall'
-import { ApiClient } from './api/api'
+import { writeNotification } from './firebase/firestore'
+import { hasFcmServiceAccount, sendFcmNotification } from './firebase/fcm'
+import { PushNotificationClient } from './api/pushNotifications'
 import { runDoctorCommand } from './ui/doctor'
 import { listDaemonSessions, stopDaemonSession } from './daemon/controlClient'
 import { handleAuthCommand } from './commands/auth'
@@ -774,42 +776,57 @@ ${chalk.bold('Examples:')}
     process.exit(1)
   }
 
-  // Load credentials
-  let credentials = await readCredentials()
-  if (!credentials) {
-    console.error(chalk.red('Error: Not authenticated. Please run "happy auth login" first.'))
-    process.exit(1)
-  }
+  const notificationTitle = title || 'Happy'
 
-  console.log(chalk.blue('📱 Sending push notification...'))
+  console.log(chalk.blue('📱 Sending notification...'))
 
+  // 1. Write to Firestore
   try {
-    // Create API client and send push notification
-    const api = await ApiClient.create(credentials);
-
-    // Use custom title or default to "Happy"
-    const notificationTitle = title || 'Happy'
-
-    // Send the push notification
-    api.push().sendToAllDevices(
-      notificationTitle,
-      message,
-      {
-        source: 'cli',
-        timestamp: Date.now()
-      }
-    )
-
-    console.log(chalk.green('✓ Push notification sent successfully!'))
-    console.log(chalk.gray(`  Title: ${notificationTitle}`))
-    console.log(chalk.gray(`  Message: ${message}`))
-    console.log(chalk.gray('  Check your mobile device for the notification.'))
-
-    // Give a moment for the async operation to start
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
+    const docId = await writeNotification({
+      title: notificationTitle,
+      body: message,
+      source: 'cli',
+      timestamp: Date.now(),
+      read: false,
+    })
+    console.log(chalk.green(`✓ Notification written to Firestore (${docId})`))
   } catch (error) {
-    console.error(chalk.red('✗ Failed to send push notification'))
+    console.error(chalk.red('✗ Failed to write notification to Firestore'))
     throw error
   }
+
+  // 2. Send FCM push notification directly
+  try {
+    if (!hasFcmServiceAccount()) {
+      console.log(chalk.yellow('⚠ FCM service account not found — push notification skipped.'))
+      console.log(chalk.yellow('  Copy your service account key to ~/.happy/fcm-service-account.json'))
+    } else {
+      const credentials = await readCredentials()
+      if (!credentials) {
+        console.log(chalk.yellow('⚠ Not authenticated — push notification skipped. Run "happy auth login" to enable push.'))
+      } else {
+        const { configuration } = await import('./configuration')
+        const pushClient = new PushNotificationClient(credentials.token, configuration.serverUrl)
+        const tokens = await pushClient.fetchPushTokens()
+
+        if (tokens.length === 0) {
+          console.log(chalk.yellow('⚠ No push tokens registered — open the app on your phone first.'))
+        } else {
+          const data: Record<string, string> = { source: 'cli', timestamp: String(Date.now()) }
+          const results = await Promise.allSettled(
+            tokens.map(t => sendFcmNotification(t.token, notificationTitle, message, data))
+          )
+          const succeeded = results.filter(r => r.status === 'fulfilled' && r.value !== null).length
+          console.log(chalk.green(`✓ Push notification sent to ${succeeded}/${tokens.length} device(s)`))
+        }
+      }
+    }
+  } catch (error) {
+    // Push is best-effort; Firestore write already succeeded
+    console.log(chalk.yellow('⚠ Push notification failed (Firestore write succeeded)'))
+    logger.debug('[notify] Push error:', error)
+  }
+
+  console.log(chalk.gray(`  Title: ${notificationTitle}`))
+  console.log(chalk.gray(`  Message: ${message}`))
 }

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useFriendRequests, useSocketStatus, useRealtimeStatus } from '@/sync/storage';
+import { useSocketStatus, useRealtimeStatus } from '@/sync/storage';
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { useIsTablet } from '@/utils/responsive';
 import { useRouter } from 'expo-router';
@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '@/constants/Typography';
 import { t } from '@/text';
 import { isUsingCustomServer } from '@/sync/serverConfig';
-import { trackFriendsSearch } from '@/track';
+import { useNotifications } from '@/firebase/notifications';
 
 interface MainViewProps {
     variant: 'phone' | 'sidebar';
@@ -189,21 +189,6 @@ const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => 
         );
     }
 
-    if (activeTab === 'inbox') {
-        return (
-            <Pressable
-                onPress={() => {
-                    trackFriendsSearch();
-                    router.push('/friends/search');
-                }}
-                hitSlop={15}
-                style={styles.headerButton}
-            >
-                <Ionicons name="person-add-outline" size={24} color={theme.colors.header.tint} />
-            </Pressable>
-        );
-    }
-
     if (activeTab === 'settings') {
         if (!isCustomServer) {
             // Empty view to maintain header centering
@@ -220,7 +205,8 @@ const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => 
         );
     }
 
-    return null;
+    // Inbox tab and fallback: empty spacer to keep title centred
+    return <View style={styles.headerButton} />;
 });
 
 export const MainView = React.memo(({ variant }: MainViewProps) => {
@@ -228,7 +214,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     const sessionListViewData = useVisibleSessionListViewData();
     const isTablet = useIsTablet();
     const router = useRouter();
-    const friendRequests = useFriendRequests();
+    const { unreadCount } = useNotifications();
     const realtimeStatus = useRealtimeStatus();
 
     // Tab state management
@@ -317,7 +303,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
             <TabBar
                 activeTab={activeTab}
                 onTabPress={handleTabPress}
-                inboxBadgeCount={friendRequests.length}
+                inboxBadgeCount={unreadCount}
             />
         </>
     );
