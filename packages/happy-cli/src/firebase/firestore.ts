@@ -1,13 +1,18 @@
 /**
- * Firestore client module for writing notifications.
+ * Firestore module for writing notifications via service-account auth.
  *
- * Uses the Firebase client SDK (same project as the mobile app) so no
- * service-account credentials are needed.  Notifications written here
- * are picked up in real-time by the app's `onSnapshot` listener.
+ * Uses the same service-account key as FCM (`~/.happy/fcm-service-account.json`)
+ * to call the Firestore REST API directly.  This bypasses Firestore security
+ * rules, so the rules can block all unauthenticated creates.
  */
-import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getFirestore, collection, addDoc } from 'firebase/firestore'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { JWT } from 'google-auth-library'
 import { configuration } from '@/configuration'
+import { logger } from '@/ui/logger'
+
+const SERVICE_ACCOUNT_PATH = join(configuration.happyHomeDir, 'fcm-service-account.json')
+const FIRESTORE_SCOPE = 'https://www.googleapis.com/auth/datastore'
 
 /** Shape of a notification document stored in the `notifications` collection. */
 export interface NotificationDoc {
@@ -18,29 +23,76 @@ export interface NotificationDoc {
     read: boolean
 }
 
-let app: FirebaseApp | null = null
+interface ServiceAccountKey {
+    project_id: string
+    client_email: string
+    private_key: string
+}
 
-function getDb() {
-    if (!app) {
-        if (!configuration.firebaseApiKey || !configuration.firebaseProjectId) {
-            throw new Error('Missing HAPPY_FIREBASE_API_KEY or HAPPY_FIREBASE_PROJECT_ID environment variables')
-        }
-        app = initializeApp({
-            apiKey: configuration.firebaseApiKey,
-            projectId: configuration.firebaseProjectId,
-            storageBucket: configuration.firebaseStorageBucket,
-        })
+let cachedJwt: JWT | null = null
+let cachedProjectId: string | null = null
+
+async function getAuth(): Promise<{ jwt: JWT; projectId: string }> {
+    if (cachedJwt && cachedProjectId) {
+        return { jwt: cachedJwt, projectId: cachedProjectId }
     }
-    return getFirestore(app)
+
+    const raw = await readFile(SERVICE_ACCOUNT_PATH, 'utf-8')
+    const key: ServiceAccountKey = JSON.parse(raw)
+
+    const jwt = new JWT({
+        email: key.client_email,
+        key: key.private_key,
+        scopes: [FIRESTORE_SCOPE],
+    })
+
+    cachedJwt = jwt
+    cachedProjectId = key.project_id
+    return { jwt, projectId: key.project_id }
 }
 
 /**
- * Write a notification document to Firestore.
+ * Convert a NotificationDoc into Firestore REST API field format.
+ */
+function toFirestoreFields(doc: NotificationDoc): Record<string, unknown> {
+    return {
+        title: { stringValue: doc.title },
+        body: { stringValue: doc.body },
+        source: { stringValue: doc.source },
+        timestamp: { integerValue: String(doc.timestamp) },
+        read: { booleanValue: doc.read },
+    }
+}
+
+/**
+ * Write a notification document to Firestore via REST API.
  *
  * @returns The Firestore document ID of the newly created notification.
  */
 export async function writeNotification(notification: NotificationDoc): Promise<string> {
-    const db = getDb()
-    const ref = await addDoc(collection(db, 'notifications'), notification)
-    return ref.id
+    const { jwt, projectId } = await getAuth()
+    const accessToken = await jwt.authorize()
+
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/notifications`
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken.access_token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fields: toFirestoreFields(notification) }),
+    })
+
+    if (!response.ok) {
+        const errorBody = await response.text()
+        logger.debug(`[Firestore] Write failed (${response.status}): ${errorBody}`)
+        throw new Error(`Firestore write failed (${response.status}): ${errorBody}`)
+    }
+
+    const result = await response.json() as { name: string }
+    // name is like "projects/.../documents/notifications/DOC_ID"
+    const docId = result.name.split('/').pop()!
+    logger.debug(`[Firestore] Notification written: ${docId}`)
+    return docId
 }

@@ -4,3 +4,6 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# Firebase config contains API keys — kept local, not committed
+google-services.json
